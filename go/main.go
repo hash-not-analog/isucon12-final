@@ -314,9 +314,13 @@ func (h *Handler) checkViewerID(userID int64, viewerID string) error {
 
 // checkBan
 func (h *Handler) checkBan(userID int64) (bool, error) {
-	_, ok := userBanCache.Get(userID)
-	if !ok {
-		return false, nil
+	banUser := new(UserBan)
+	query := "SELECT * FROM user_bans WHERE user_id=?"
+	if err := h.DB.Get(banUser, query, userID); err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
 	}
 	return true, nil
 }
