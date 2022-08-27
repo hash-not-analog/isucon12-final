@@ -185,13 +185,19 @@ func (h *Handler) obtainCoin(tx *sqlx.Tx, obtainCoins map[int64]*UserPresent, ob
 		return err
 	}
 
-	totalCoins := map[int64]int64{}
-	for _, user := range users {
-		totalCoins[user.ID] = user.IsuCoin + int64(obtainCoins[user.ID].Amount)
+	type BulkUpdateIsuCoin struct {
+		UserID    int64 `db:"id"`
+		TotalCoin int64 `db:"isu_coin"`
 	}
-
+	totalCoins := []BulkUpdateIsuCoin{}
+	for _, user := range users {
+		totalCoins = append(totalCoins, BulkUpdateIsuCoin{
+			UserID:    user.ID,
+			TotalCoin: user.IsuCoin + int64(obtainCoins[user.ID].Amount),
+		})
+	}
 	query = "INSERT INTO users (`id`, `isu_coin`) VALUES (:id, :isu_coin) ON DUPLICATE KEY UPDATE `isu_coin` = VALUES(`isu_coin`)"
-	if _, err := tx.NamedExec(query, users); err != nil {
+	if _, err := tx.NamedExec(query, totalCoins); err != nil {
 		return err
 	}
 
