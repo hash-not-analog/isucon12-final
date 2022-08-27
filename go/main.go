@@ -478,17 +478,17 @@ var duplicatedIDMap = helpisu.NewCache[int, struct{}]()
 
 // generateID uniqueなIDを生成する
 func (h *Handler) generateID() (int64, error) {
-	var id int64
+	var id int
 
 	for {
-		id := rand.Intn(8223372036854775807)
+		id = rand.Intn(8223372036854775807)
 		_, ok := duplicatedIDMap.Get(id)
 		if !ok {
 			break
 		}
 	}
 
-	return id + 100000000001, nil
+	return int64(id + 100000000001), nil
 }
 
 // generateSessionID
