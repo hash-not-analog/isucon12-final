@@ -34,7 +34,7 @@ CREATE TABLE `users` (
 
 CREATE TABLE `user_decks` (
   `id` bigint NOT NULL,
-  `user_id` bigint NOT NULL comment 'ユーザID', 
+  `user_id` bigint NOT NULL comment 'ユーザID',
   `user_card_id_1` bigint NOT NULL comment '装備枠1',
   `user_card_id_2` bigint NOT NULL comment '装備枠2',
   `user_card_id_3` bigint NOT NULL comment '装備枠3',
@@ -47,7 +47,7 @@ CREATE TABLE `user_decks` (
 
 CREATE TABLE `user_bans` (
   `id` bigint NOT NULL,
-  `user_id` bigint NOT NULL comment 'ユーザID', 
+  `user_id` bigint NOT NULL comment 'ユーザID',
   `created_at` bigint NOT NULL,
   `updated_at`bigint NOT NULL,
   `deleted_at` bigint default NULL,
@@ -57,9 +57,9 @@ CREATE TABLE `user_bans` (
 
 CREATE TABLE `user_devices` (
   `id` bigint NOT NULL,
-  `user_id` bigint NOT NULL comment 'ユーザID', 
+  `user_id` bigint NOT NULL comment 'ユーザID',
   `platform_id` varchar(255) NOT NULL comment 'プラットフォームのviewer_id',
-  `platform_type` int(1) NOT NULL comment 'PC:1,iOS:2,Android:3', 
+  `platform_type` int(1) NOT NULL comment 'PC:1,iOS:2,Android:3',
   `created_at` bigint NOT NULL,
   `updated_at`bigint NOT NULL,
   `deleted_at` bigint default NULL,
@@ -94,7 +94,7 @@ CREATE TABLE `login_bonus_reward_masters` (
 
 CREATE TABLE `user_login_bonuses` (
   `id` bigint NOT NULL,
-  `user_id` bigint NOT NULL comment 'ユーザID', 
+  `user_id` bigint NOT NULL comment 'ユーザID',
   `login_bonus_id` int NOT NULL comment 'ログインボーナスID',
   `last_reward_sequence` int NOT NULL comment '最終受け取り報酬番号',
   `loop_count` int NOT NULL comment 'ループ回数',
@@ -131,6 +131,8 @@ CREATE TABLE `user_present_all_received_history` (
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+ALTER TABLE `user_present_all_received_history` ADD INDEX user_present_all_index(`user_id`, `present_all_id`);
 
 /* ガチャマスタ */
 
@@ -220,6 +222,8 @@ CREATE TABLE `user_sessions` (
   PRIMARY KEY (`id`),
   UNIQUE uniq_session_id (`user_id`, `session_id`, `deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+ALTER TABLE `user_sessions` ADD INDEX user_id_index(`user_id`);
 
 /* 更新処理について利用するone time tokenの管理 */
 CREATE TABLE `user_one_time_tokens` (
