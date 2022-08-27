@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -474,27 +473,21 @@ func noContentResponse(c echo.Context, status int) error {
 	return c.NoContent(status)
 }
 
+var duplicatedIDMap = helpisu.NewCache[int, struct{}]()
+
 // generateID uniqueなIDを生成する
 func (h *Handler) generateID() (int64, error) {
-	var updateErr error
-	for i := 0; i < 100; i++ {
-		res, err := h.DB.Exec("UPDATE id_generator SET id=LAST_INSERT_ID(id+1)")
-		if err != nil {
-			if merr, ok := err.(*mysql.MySQLError); ok && merr.Number == 1213 {
-				updateErr = err
-				continue
-			}
-			return 0, err
-		}
+	var id int64
 
-		id, err := res.LastInsertId()
-		if err != nil {
-			return 0, err
+	for {
+		id := rand.Intn(9223372036854775807)
+		_, ok := duplicatedIDMap.Get(id)
+		if !ok {
+			break
 		}
-		return id, nil
 	}
 
-	return 0, fmt.Errorf("failed to generate id: %w", updateErr)
+	return id, nil
 }
 
 // generateSessionID
