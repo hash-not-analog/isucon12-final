@@ -1,6 +1,6 @@
 module github.com/isucon/isucon12-final/webapp/go
 
-go 1.18
+go 1.19
 
 require (
 	github.com/go-sql-driver/mysql v1.6.0
@@ -29,5 +29,5 @@ require (
 	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b // indirect
 	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
+	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 )
