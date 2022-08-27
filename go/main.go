@@ -51,6 +51,10 @@ type Handler struct {
 
 func main() {
 	go http.ListenAndServe(":6060", nil)
+
+	http.DefaultTransport.(*http.Transport).MaxIdleConns = 0           // default: 100
+	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 1024 // default: 2
+
 	rand.Seed(time.Now().UnixNano())
 	time.Local = time.FixedZone("Local", 9*60*60)
 
