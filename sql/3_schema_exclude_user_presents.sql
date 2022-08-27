@@ -170,7 +170,8 @@ CREATE TABLE `gacha_item_masters` (
   `weight` int NOT NULL comment '確率。万分率で表示',
   `created_at` bigint NOT NULL,
   PRIMARY KEY (`gacha_id`, `id`),
-  UNIQUE uniq_item_id (`gacha_id`, `item_type`, `item_id`)
+  UNIQUE uniq_item_id (`gacha_id`, `item_type`, `item_id`),
+  INDEX id_itemtype_index (`id`, `item_type`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin;
 
 CREATE TABLE `user_items` (
@@ -183,7 +184,7 @@ CREATE TABLE `user_items` (
   `updated_at` bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`id`),
-  INDEX userid_idx (`user_id`)
+  INDEX userid_itemid_idx (`user_id`, `item_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin;
 
 CREATE TABLE `user_cards` (
@@ -250,7 +251,8 @@ CREATE TABLE `user_one_time_tokens` (
   `expired_at` bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`id`),
-  UNIQUE uniq_token (`user_id`, `token`, `deleted_at`)
+  UNIQUE uniq_token (`user_id`, `token`, `deleted_at`),
+  INDEX token_index (`token`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin;
 
 /* 管理者権限のセッション管理 */
