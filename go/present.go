@@ -199,27 +199,34 @@ type ReceivePresentResponse struct {
 }
 
 func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
+	userCoinIds := make([]int64, len(obtainCoins))
+	userCoinFromDB := make([]*User, len(obtainCoins))
 	userCoinMap := make(map[int64]*User, len(obtainCoins))
+	userCoins := make([]*User, 0, len(obtainCoins))
 
-	for i := range obtainCoins {
-		_, ok := userCoinMap[obtainCoins[i].UserID]
-		if !ok {
-			userCoinMap[obtainCoins[i].UserID] = new(User)
-			query := "SELECT * FROM users WHERE id=?"
-			if err := tx.Get(userCoinMap[obtainCoins[i].UserID], query, obtainCoins[i].UserID); err != nil {
-				if err == sql.ErrNoRows {
-					return ErrUserNotFound
-				}
-				return err
-			}
-		}
-
-		userCoinMap[obtainCoins[i].UserID].IsuCoin = userCoinMap[obtainCoins[i].UserID].IsuCoin + int64(obtainCoins[i].Amount)
+	if len(obtainCoins) == 0 {
+		return nil
 	}
 
-	userCoins := make([]*User, 0, len(obtainCoins))
-	for _, v := range userCoinMap {
-		userCoins = append(userCoins, v)
+	for i := range obtainCoins {
+		userCoinIds = append(userCoinIds, obtainCoins[i].UserID)
+	}
+
+	query := "SELECT * FROM users WHERE id IN (?)"
+	query, params, err := sqlx.In(query, userCoinIds)
+	if err != nil {
+		return err
+	}
+	err = tx.Select(&userCoinFromDB, query, params...)
+	if err != nil {
+		return err
+	}
+	for i := range userCoinFromDB {
+		userCoinMap[userCoinFromDB[i].ID] = userCoinFromDB[i]
+	}
+	for i := range obtainCoins {
+		userCoinMap[obtainCoins[i].UserID].IsuCoin += int64(obtainCoins[i].Amount)
+		userCoins = append(userCoins, userCoinMap[obtainCoins[i].UserID])
 	}
 
 	if len(userCoins) <= 0 {
@@ -227,7 +234,7 @@ func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
 	}
 
 	// query := "UPDATE users SET isu_coin=? WHERE id=?"
-	query := "INSERT INTO users(id, isu_coin, last_activated_at, registered_at, last_getreward_at, created_at, updated_at)" +
+	query = "INSERT INTO users(id, isu_coin, last_activated_at, registered_at, last_getreward_at, created_at, updated_at)" +
 		" VALUES(:id, :isu_coin, :last_activated_at, :registered_at, :last_getreward_at, :created_at, :updated_at)" +
 		" ON DUPLICATE KEY UPDATE isu_coin = VALUES(isu_coin)"
 	if _, err := tx.NamedExec(query, userCoins); err != nil {
