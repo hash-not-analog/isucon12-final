@@ -193,6 +193,10 @@ func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
 	userCoinMap := make(map[int64]*User, len(obtainCoins))
 	userCoins := make([]*User, 0, len(obtainCoins))
 
+	if len(obtainCoins) == 0 {
+		return nil
+	}
+
 	for i := range obtainCoins {
 		userCoinIds = append(userCoinIds, obtainCoins[i].UserID)
 	}
