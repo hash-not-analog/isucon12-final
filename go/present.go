@@ -134,7 +134,8 @@ func (h *Handler) receivePresent(c echo.Context) error {
 		}
 	}
 
-	query = "INSERT INTO user_presents (id, deleted_at, updated_at) VALUES (:id, :deleted_at, :updated_at)" +
+	query = "INSERT INTO user_presents(id, user_id, sent_at, item_type, item_id, amount, present_message, created_at, deleted_at, updated_at)" +
+		" VALUES (:id, :user_id, :sent_at, :item_type, :item_id, :amount, :present_message, :created_at, :deleted_at, :updated_at)" +
 		" ON DUPLICATE KEY UPDATE deleted_at=VALUES(deleted_at), updated_at=VALUES(updated_at)"
 	_, err = tx.NamedExec(query, obtainPresent)
 	if err != nil {
