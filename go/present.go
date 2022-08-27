@@ -176,9 +176,18 @@ func (h *Handler) obtainItem(tx *sqlx.Tx, obtainPresents []*UserPresent, request
 		}
 	}
 
-	h.obtainCoin(tx, obtainCoins, obtainCoinsId, requestAt)
-	h.obtainCard(tx, obtainCards, obtainCardsId, requestAt)
-	h.obtainMaterial(tx, obtainMaterials, obtainMaterialsId, requestAt)
+	err := h.obtainCoin(tx, obtainCoins, obtainCoinsId, requestAt)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	err = h.obtainCard(tx, obtainCards, obtainCardsId, requestAt)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	err = h.obtainMaterial(tx, obtainMaterials, obtainMaterialsId, requestAt)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	return nil, nil, nil, nil
 }
