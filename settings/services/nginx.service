@@ -26,8 +26,10 @@ ExecStop=-/sbin/start-stop-daemon --quiet --stop --retry QUIT/5 --pidfile /run/n
 TimeoutStopSec=5
 KillMode=mixed
 Restart=always
-DefaultStartLimitInterval=20s
-DefaultStartLimitBurst=200
 
 [Install]
 WantedBy=multi-user.target
+
+[Manager]
+DefaultStartLimitInterval=20s
+DefaultStartLimitBurst=200

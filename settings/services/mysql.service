@@ -21,8 +21,10 @@ RuntimeDirectory=mysqld
 RuntimeDirectoryMode=755
 LimitNOFILE=10000
 Restart=always
-DefaultStartLimitInterval=20s
-DefaultStartLimitBurst=200
 
 # Set enviroment variable MYSQLD_PARENT_PID. This is required for restart.
 Environment=MYSQLD_PARENT_PID=1
+
+[Manager]
+DefaultStartLimitInterval=20s
+DefaultStartLimitBurst=200

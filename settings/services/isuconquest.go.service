@@ -14,6 +14,8 @@ ExecStop=/bin/kill -s QUIT $MAINPID
 
 Restart   = always
 Type      = simple
+
+[Manager]
 DefaultStartLimitInterval=20s
 DefaultStartLimitBurst=200
 
