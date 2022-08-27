@@ -113,17 +113,6 @@ func (h *Handler) receivePresent(c echo.Context) error {
 	defer tx.Rollback() //nolint:errcheck
 
 	// 配布処理
-	_, _, _, err = h.obtainItem(tx, obtainPresent, requestAt)
-	if err != nil {
-		if err == ErrUserNotFound || err == ErrItemNotFound {
-			return errorResponse(c, http.StatusNotFound, err)
-		}
-		if err == ErrInvalidItemType {
-			return errorResponse(c, http.StatusBadRequest, err)
-		}
-		return errorResponse(c, http.StatusInternalServerError, err)
-	}
-
 	for i := range obtainPresent {
 		if obtainPresent[i].DeletedAt != nil {
 			return errorResponse(c, http.StatusInternalServerError, fmt.Errorf("received present"))
@@ -139,6 +128,18 @@ func (h *Handler) receivePresent(c echo.Context) error {
 		if err != nil {
 			return errorResponse(c, http.StatusInternalServerError, err)
 		}
+	}
+
+	_, _, _, err = h.obtainItem(tx, obtainPresent, requestAt)
+
+	if err != nil {
+		if err == ErrUserNotFound || err == ErrItemNotFound {
+			return errorResponse(c, http.StatusNotFound, err)
+		}
+		if err == ErrInvalidItemType {
+			return errorResponse(c, http.StatusBadRequest, err)
+		}
+		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 
 	err = tx.Commit()
