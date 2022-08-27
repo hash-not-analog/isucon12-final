@@ -206,13 +206,13 @@ func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
 		userCoinMap[obtainCoins[i].UserID].IsuCoin = userCoinMap[obtainCoins[i].UserID].IsuCoin + int64(obtainCoins[i].Amount)
 	}
 
-	if len(userCoinMap) <= 0 {
-		return nil
-	}
-
 	userCoins := make([]*User, 0, len(obtainCoins))
 	for _, v := range userCoinMap {
 		userCoins = append(userCoins, v)
+	}
+
+	if len(userCoins) <= 0 {
+		return nil
 	}
 
 	// query := "UPDATE users SET isu_coin=? WHERE id=?"
