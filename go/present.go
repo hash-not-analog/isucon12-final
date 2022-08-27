@@ -188,7 +188,7 @@ type ReceivePresentResponse struct {
 }
 
 func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
-	userCoins := make([]*User, 0, len(obtainCoins))
+	userCoins := make([]User, 0, len(obtainCoins))
 
 	for i := range obtainCoins {
 		user := new(User)
@@ -201,7 +201,7 @@ func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
 		}
 
 		user.IsuCoin = user.IsuCoin + int64(obtainCoins[i].Amount)
-		userCoins = append(userCoins, user)
+		userCoins = append(userCoins, *user)
 	}
 
 	if len(userCoins) <= 0 {
