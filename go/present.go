@@ -188,24 +188,31 @@ type ReceivePresentResponse struct {
 }
 
 func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
-	userCoins := make([]User, 0, len(obtainCoins))
+	userCoinMap := make(map[int64]*User, len(obtainCoins))
 
 	for i := range obtainCoins {
-		user := new(User)
-		query := "SELECT * FROM users WHERE id=?"
-		if err := tx.Get(user, query, obtainCoins[i].UserID); err != nil {
-			if err == sql.ErrNoRows {
-				return ErrUserNotFound
+		_, ok := userCoinMap[obtainCoins[i].UserID]
+		if !ok {
+			userCoinMap[obtainCoins[i].UserID] = new(User)
+			query := "SELECT * FROM users WHERE id=?"
+			if err := tx.Get(userCoinMap[obtainCoins[i].UserID], query, obtainCoins[i].UserID); err != nil {
+				if err == sql.ErrNoRows {
+					return ErrUserNotFound
+				}
+				return err
 			}
-			return err
 		}
 
-		user.IsuCoin = user.IsuCoin + int64(obtainCoins[i].Amount)
-		userCoins = append(userCoins, *user)
+		userCoinMap[obtainCoins[i].UserID].IsuCoin = userCoinMap[obtainCoins[i].UserID].IsuCoin + int64(obtainCoins[i].Amount)
 	}
 
-	if len(userCoins) <= 0 {
+	if len(userCoinMap) <= 0 {
 		return nil
+	}
+
+	userCoins := make([]*User, 0, len(obtainCoins))
+	for _, v := range userCoinMap {
+		userCoins = append(userCoins, v)
 	}
 
 	// query := "UPDATE users SET isu_coin=? WHERE id=?"
