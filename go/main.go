@@ -18,6 +18,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/logica0419/helpisu"
 	"github.com/pkg/errors"
 )
 
@@ -62,6 +63,8 @@ func main() {
 		AllowMethods: []string{http.MethodGet, http.MethodPost},
 		AllowHeaders: []string{"Content-Type", "x-master-version", "x-session"},
 	}))
+
+	e.JSONSerializer = helpisu.NewSonicSerializer()
 
 	// connect db
 	dbx, err := connectDB(false)
@@ -278,13 +281,9 @@ func (h *Handler) checkViewerID(userID int64, viewerID string) error {
 
 // checkBan
 func (h *Handler) checkBan(userID int64) (bool, error) {
-	banUser := new(UserBan)
-	query := "SELECT * FROM user_bans WHERE user_id=?"
-	if err := h.DB.Get(banUser, query, userID); err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
-		}
-		return false, err
+	_, ok := userBanCache.Get(userID)
+	if !ok {
+		return false, nil
 	}
 	return true, nil
 }
@@ -421,6 +420,18 @@ func initialize(c echo.Context) error {
 	if err != nil {
 		c.Logger().Errorf("Failed to initialize %s: %v", string(out), err)
 		return errorResponse(c, http.StatusInternalServerError, err)
+	}
+
+	helpisu.ResetAllCache()
+
+	var banUsers []*UserBan
+	query := "SELECT * FROM user_bans"
+	if err := dbx.Select(&banUsers, query); err != nil {
+		c.Logger().Errorf("Failed to initialize: %v", err)
+		return errorResponse(c, http.StatusInternalServerError, err)
+	}
+	for _, banUser := range banUsers {
+		userBanCache.Set(banUser.UserID, *banUser)
 	}
 
 	return successResponse(c, &InitializeResponse{
