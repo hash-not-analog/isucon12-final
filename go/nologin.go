@@ -371,6 +371,9 @@ func (h *Handler) obtainLoginBonus(tx *sqlx.Tx, userID int64, requestAt int64) (
 	}
 
 	sendLoginBonuses := make([]*UserLoginBonus, 0)
+	obtainCoins := []*UserPresent{}
+	obtainCards := []*UserPresent{}
+	obtainGems := []*UserPresent{}
 
 	for _, bonus := range loginBonuses {
 		initBonus := false
@@ -422,25 +425,56 @@ func (h *Handler) obtainLoginBonus(tx *sqlx.Tx, userID int64, requestAt int64) (
 			return nil, err
 		}
 
-		_, _, _, err := h.obtainItem(tx, userID, rewardItem.ItemID, rewardItem.ItemType, rewardItem.Amount, requestAt)
-		if err != nil {
-			return nil, err
+		currentItem := &UserPresent{
+			UserID:    userID,
+			SentAt:    requestAt,
+			ItemType:  rewardItem.ItemType,
+			ItemID:    rewardItem.ItemID,
+			Amount:    int(rewardItem.Amount),
+			CreatedAt: requestAt,
+			UpdatedAt: requestAt,
+		}
+
+		switch rewardItem.ItemType {
+		case 1: // coin
+			obtainCoins = append(obtainCoins, currentItem)
+		case 2: // card(ハンマー)
+			obtainCards = append(obtainCards, currentItem)
+		case 3, 4: // 強化素材
+			obtainGems = append(obtainGems, currentItem)
+		default:
+			return nil, ErrInvalidItemType
 		}
 
 		// 進捗の保存
 		if initBonus {
 			query = "INSERT INTO user_login_bonuses(id, user_id, login_bonus_id, last_reward_sequence, loop_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-			if _, err = tx.Exec(query, userBonus.ID, userBonus.UserID, userBonus.LoginBonusID, userBonus.LastRewardSequence, userBonus.LoopCount, userBonus.CreatedAt, userBonus.UpdatedAt); err != nil {
+			if _, err := tx.Exec(query, userBonus.ID, userBonus.UserID, userBonus.LoginBonusID, userBonus.LastRewardSequence, userBonus.LoopCount, userBonus.CreatedAt, userBonus.UpdatedAt); err != nil {
 				return nil, err
 			}
 		} else {
 			query = "UPDATE user_login_bonuses SET last_reward_sequence=?, loop_count=?, updated_at=? WHERE id=?"
-			if _, err = tx.Exec(query, userBonus.LastRewardSequence, userBonus.LoopCount, userBonus.UpdatedAt, userBonus.ID); err != nil {
+			if _, err := tx.Exec(query, userBonus.LastRewardSequence, userBonus.LoopCount, userBonus.UpdatedAt, userBonus.ID); err != nil {
 				return nil, err
 			}
 		}
 
 		sendLoginBonuses = append(sendLoginBonuses, userBonus)
+	}
+
+	err := h.obtainCoins(tx, obtainCoins)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.obtainCards(tx, obtainCards)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.obtainGems(tx, obtainGems)
+	if err != nil {
+		return nil, err
 	}
 
 	return sendLoginBonuses, nil

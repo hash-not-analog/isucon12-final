@@ -56,7 +56,7 @@ func (h *Handler) listGacha(c echo.Context) error {
 		})
 	}
 
-	// genearte one time token
+	// generate one time token
 	query = "UPDATE user_one_time_tokens SET deleted_at=? WHERE user_id=? AND deleted_at IS NULL"
 	if _, err = h.DB.Exec(query, requestAt, userID); err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
