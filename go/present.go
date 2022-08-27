@@ -192,16 +192,16 @@ type UserCoin struct {
 
 func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
 	for i := range obtainCoins {
-		user, err := getUserByID(tx, obtainCoins[i].UserID)
-		if err != nil {
+		user := new(User)
+		query := "SELECT * FROM users WHERE id=?"
+		if err := tx.Get(user, query, obtainCoins[i].UserID); err != nil {
 			if err == sql.ErrNoRows {
 				return ErrUserNotFound
 			}
-
 			return err
 		}
 
-		query := "UPDATE users SET isu_coin=? WHERE id=?"
+		query = "UPDATE users SET isu_coin=? WHERE id=?"
 		totalCoin := user.IsuCoin + int64(obtainCoins[i].Amount)
 		if _, err := tx.Exec(query, totalCoin, user.ID); err != nil {
 			return err
@@ -327,8 +327,9 @@ func (h *Handler) listItem(c echo.Context) error {
 		return errorResponse(c, http.StatusInternalServerError, ErrGetRequestTime)
 	}
 
-	user, err := getUserByID(h.DB, userID)
-	if err != nil {
+	user := new(User)
+	query := "SELECT * FROM users WHERE id=?"
+	if err = h.DB.Get(user, query, userID); err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, http.StatusNotFound, ErrUserNotFound)
 		}
@@ -336,7 +337,7 @@ func (h *Handler) listItem(c echo.Context) error {
 	}
 
 	itemList := []*UserItem{}
-	query := "SELECT * FROM user_items WHERE user_id = ?"
+	query = "SELECT * FROM user_items WHERE user_id = ?"
 	if err = h.DB.Select(&itemList, query, userID); err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
@@ -347,7 +348,7 @@ func (h *Handler) listItem(c echo.Context) error {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 
-	// generate one time token
+	// genearte one time token
 	query = "UPDATE user_one_time_tokens SET deleted_at=? WHERE user_id=? AND deleted_at IS NULL"
 	if _, err = h.DB.Exec(query, requestAt, userID); err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
