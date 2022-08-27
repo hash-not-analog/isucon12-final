@@ -209,8 +209,8 @@ func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
 	}
 
 	// query := "UPDATE users SET isu_coin=? WHERE id=?"
-	query := "INSERT INTO users(id, last_activated_at, registered_at, last_getreward_at, created_at, updated_at)" +
-		" VALUES(:id, :last_activated_at, :registered_at, :last_getreward_at, :created_at, :updated_at)" +
+	query := "INSERT INTO users(id, isu_coin, last_activated_at, registered_at, last_getreward_at, created_at, updated_at)" +
+		" VALUES(:id, :isu_coin, :last_activated_at, :registered_at, :last_getreward_at, :created_at, :updated_at)" +
 		" ON DUPLICATE KEY UPDATE isu_coin = VALUES(isu_coin)"
 	if _, err := tx.NamedExec(query, userCoins); err != nil {
 		return err
