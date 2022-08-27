@@ -325,14 +325,14 @@ func (h *Handler) obtainItem(tx *sqlx.Tx, obtainPresents []*UserPresent, request
 		}
 	}
 
-	obtainCoin(obtainCoins, obtainCoinsId)
-	obtainCard(obtainCards, obtainCardsId)
-	obtainItem(obtainItems, obtainItemsId)
+	obtainCoin(tx, obtainCoins, obtainCoinsId)
+	obtainCard(tx, obtainCards, obtainCardsId)
+	obtainItem(tx, obtainItems, obtainItemsId)
 
 	return nil, nil, nil, nil
 }
 
-func obtainCoin(obtainCoins map[int64]*UserPresent, obtainCoinsId []int64) error {
+func obtainCoin(tx *sqlx.Tx, obtainCoins map[int64]*UserPresent, obtainCoinsId []int64) error {
 	query := "SELECT * FROM users WHERE id IN (?)"
 	query, params, err := sqlx.In(query, obtainCoinsId)
 	if err != nil {
@@ -354,7 +354,7 @@ func obtainCoin(obtainCoins map[int64]*UserPresent, obtainCoinsId []int64) error
 	}
 }
 
-func obtainCard(obtainCards map[int64]*UserPresent, obtainCardsId []int64) error {
+func obtainCard(tx *sqlx.Tx, obtainCards map[int64]*UserPresent, obtainCardsId []int64) error {
 	query := "SELECT * FROM item_masters WHERE id=? AND item_type=?"
 	item := new(ItemMaster)
 	if err := tx.Get(item, query, itemID, itemType); err != nil {
@@ -385,7 +385,7 @@ func obtainCard(obtainCards map[int64]*UserPresent, obtainCardsId []int64) error
 	obtainCards = append(obtainCards, card)
 }
 
-func obtainItem(obtainItems map[int64]*UserPresent, obtainItemsId []int64) error {
+func obtainItem(tx *sqlx.Tx, obtainItems map[int64]*UserPresent, obtainItemsId []int64) error {
 	query := "SELECT * FROM item_masters WHERE id=? AND item_type=?"
 	item := new(ItemMaster)
 	if err := tx.Get(item, query, itemID, itemType); err != nil {
