@@ -81,17 +81,23 @@ func main() {
 	}
 	defer dbx.Close()
 
+	helpisu.WaitDBStartUp(dbx.DB)
+
 	dbx2, err := connectDB(false, 2)
 	if err != nil {
 		e.Logger.Fatalf("failed to connect to db: %v", err)
 	}
 	defer dbx.Close()
 
+	helpisu.WaitDBStartUp(dbx2.DB)
+
 	dbx3, err := connectDB(false, 3)
 	if err != nil {
 		e.Logger.Fatalf("failed to connect to db: %v", err)
 	}
 	defer dbx.Close()
+
+	helpisu.WaitDBStartUp(dbx3.DB)
 
 	d.RegisterDB(dbx.DB)
 	go d.Start()
