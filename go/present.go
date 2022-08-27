@@ -121,11 +121,6 @@ func (h *Handler) receivePresent(c echo.Context) error {
 		obtainPresent[i].UpdatedAt = requestAt
 		obtainPresent[i].DeletedAt = &requestAt
 		v := obtainPresent[i]
-		query = "UPDATE user_presents SET deleted_at=?, updated_at=? WHERE id=?"
-		_, err := tx.Exec(query, requestAt, requestAt, v.ID)
-		if err != nil {
-			return errorResponse(c, http.StatusInternalServerError, err)
-		}
 
 		_, _, _, err = h.obtainItem(tx, v.UserID, v.ItemID, v.ItemType, int64(v.Amount), requestAt)
 		if err != nil {
@@ -137,6 +132,13 @@ func (h *Handler) receivePresent(c echo.Context) error {
 			}
 			return errorResponse(c, http.StatusInternalServerError, err)
 		}
+	}
+
+	query = "INSERT INTO user_presents SET deleted_at=?, updated_at=?, id=?" +
+		" ON DUPLICATE KEY UPDATE deleted_at=VALUES(deleted_at), updated_at=VALUES(updated_at)"
+	_, err = tx.NamedExec(query, obtainPresent)
+	if err != nil {
+		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 
 	err = tx.Commit()
