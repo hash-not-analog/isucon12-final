@@ -187,6 +187,9 @@ type ReceivePresentResponse struct {
 	UpdatedResources *UpdatedResource `json:"updatedResources"`
 }
 
+type UserCoin struct {
+}
+
 func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
 	for i := range obtainCoins {
 		user := new(User)
@@ -209,14 +212,23 @@ func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
 }
 
 func (h *Handler) obtainCards(tx *sqlx.Tx, obtainCards []*UserPresent) error {
+	query := "SELECT * FROM item_masters WHERE item_type=?"
+	items := []*ItemMaster{}
+	if err := tx.Select(&items, query, 2); err != nil {
+		return err
+	}
+
+	cards := make([]*UserCard, 0, len(obtainCards))
+
 	for i := range obtainCards {
-		query := "SELECT * FROM item_masters WHERE id=? AND item_type=?"
-		item := new(ItemMaster)
-		if err := tx.Get(item, query, obtainCards[i].ItemID, obtainCards[i].ItemType); err != nil {
-			if err == sql.ErrNoRows {
-				return ErrItemNotFound
+		var item *ItemMaster
+		for j := range items {
+			if obtainCards[i].ItemID == items[j].ID {
+				item = items[j]
 			}
-			return err
+		}
+		if item == nil {
+			return ErrItemNotFound
 		}
 
 		cID, err := h.generateID()
@@ -233,10 +245,14 @@ func (h *Handler) obtainCards(tx *sqlx.Tx, obtainCards []*UserPresent) error {
 			CreatedAt:    obtainCards[i].UpdatedAt,
 			UpdatedAt:    obtainCards[i].UpdatedAt,
 		}
-		query = "INSERT INTO user_cards(id, user_id, card_id, amount_per_sec, level, total_exp, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-		if _, err := tx.Exec(query, card.ID, card.UserID, card.CardID, card.AmountPerSec, card.Level, card.TotalExp, card.CreatedAt, card.UpdatedAt); err != nil {
-			return err
-		}
+
+		cards = append(cards, card)
+	}
+
+	query = "INSERT INTO user_cards(id, user_id, card_id, amount_per_sec, level, total_exp, created_at, updated_at)" +
+		" VALUES (:id, :user_id, :card_id, :amount_per_sec, :level, :total_exp, :created_at, :updated_at)"
+	if _, err := tx.NamedExec(query, cards); err != nil {
+		return err
 	}
 
 	return nil
