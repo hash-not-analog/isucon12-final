@@ -123,7 +123,7 @@ func (h *Handler) receivePresent(c echo.Context) error {
 		v := obtainPresent[i]
 		// query = "UPDATE user_presents SET deleted_at=?, updated_at=? WHERE id=?"
 		query = "DELETE FROM user_presents WHERE id=?"
-		_, err := tx.Exec(query, requestAt, requestAt, v.ID)
+		_, err := tx.Exec(query, v.ID)
 		if err != nil {
 			return errorResponse(c, http.StatusInternalServerError, err)
 		}
