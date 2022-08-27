@@ -324,29 +324,22 @@ func (h *Handler) loginProcess(tx *sqlx.Tx, userID int64, requestAt int64) (*Use
 		return nil, nil, nil, err
 	}
 
-	eg := errgroup.Group{}
-	var loginBonuses []*UserLoginBonus
-	var err error
-
-	eg.Go(func() error {
-		// ログインボーナス処理
-		loginBonuses, err = h.obtainLoginBonus(tx, userID, requestAt)
-		return err
-	})
-
-	var allPresents []*UserPresent
-	eg.Go(func() error {
-		// 全員プレゼント取得
-		allPresents, err = h.obtainPresent(tx, userID, requestAt)
-		return err
-	})
-
-	eg.Go(func() error {
-		return tx.Get(&user.IsuCoin, "SELECT isu_coin FROM users WHERE id=?", user.ID)
-	})
-
-	err = eg.Wait()
+	// ログインボーナス処理
+	loginBonuses, err := h.obtainLoginBonus(tx, userID, requestAt)
 	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// 全員プレゼント取得
+	allPresents, err := h.obtainPresent(tx, userID, requestAt)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if err = tx.Get(&user.IsuCoin, "SELECT isu_coin FROM users WHERE id=?", user.ID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, nil, ErrUserNotFound
+		}
 		return nil, nil, nil, err
 	}
 
