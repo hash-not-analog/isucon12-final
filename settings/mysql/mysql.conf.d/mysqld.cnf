@@ -39,7 +39,6 @@ mysqlx-bind-address	= 127.0.0.1
 #
 # * Fine Tuning
 #
-key_buffer_size		= 16M
 # max_allowed_packet	= 64M
 # thread_stack		= 256K
 
@@ -69,7 +68,9 @@ key_buffer_size = 256MB
 # InnoDBへの2回書き込みを無効にする
 skip-innodb-doublewrite
 
-# thread_cache_size       = -1
+skip-name-resolve=1
+key_buffer_size=0
+innodb_buffer_pool_instances=2
 
 # This replaces the startup script and checks MyISAM tables if needed
 # the first time they are touched
