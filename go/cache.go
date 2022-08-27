@@ -12,7 +12,7 @@ type Getter interface {
 
 func getUserByID(getter Getter, id int64) (*User, error) {
 	user, ok := userCache.Get(id)
-	if !ok {
+	if !ok || user == nil {
 		user := &User{}
 		query := "SELECT * FROM users WHERE id=?"
 		if err := getter.Get(user, query, id); err != nil {
