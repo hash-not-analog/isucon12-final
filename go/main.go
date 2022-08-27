@@ -298,28 +298,55 @@ func getRequestTime(c echo.Context) (int64, error) {
 }
 
 // obtainItem アイテム付与処理
-func (h *Handler) obtainItem(tx *sqlx.Tx, userID, itemID int64, itemType int, obtainAmount int64, requestAt int64) ([]int64, []*UserCard, []*UserItem, error) {
-	obtainCoins := make([]int64, 0)
-	obtainCards := make([]*UserCard, 0)
-	obtainItems := make([]*UserItem, 0)
+func (h *Handler) obtainItem(tx *sqlx.Tx, obtainPresents []*UserPresent, requestAt int64) ([]int64, []*UserCard, []*UserItem, error) {
+	// obtainCoins := make([]int64, 0)
+	// obtainCards := make([]*UserCard, 0)
+	// obtainItems := make([]*UserItem, 0)
+	obtainCoins := map[int64]*UserPresent{}
+	obtainCards := map[int64]*UserPresent{}
+	obtainItems := map[int64]*UserPresent{}
+	obtainCoinsIds := make([]int64, 0)
+	obtainCardsIds := make([]int64, 0)
+	obtainItemsIds := make([]int64, 0)
 
-	switch itemType {
-	case 1: // coin
-		user := new(User)
-		query := "SELECT * FROM users WHERE id=?"
-		if err := tx.Get(user, query, userID); err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil, nil, ErrUserNotFound
-			}
-			return nil, nil, nil, err
+	for _, obtainPresent := range obtainPresents {
+		switch obtainPresent.ItemType {
+		case 1: // coin
+			obtainCoins[obtainPresent.UserID] = obtainPresent
+			obtainCoinsId = append(obtainCoinsIds, obtainPresent.UserID)
+		case 2: // card(ハンマー)
+			obtainCards[obtainPresent.UserID] = obtainPresent
+			obtainCardsId = append(obtainCardsId, obtainPresent.UserID)
+		case 3, 4: // 強化素材
+			obtainItems[obtainPresent.UserID] = obtainPresent
+			obtainItemsId = append(obtainItemsId, obtainPresent.UserID)
+		default:
+			return nil, nil, nil, ErrInvalidItemType
 		}
+	}
 
-		query = "UPDATE users SET isu_coin=? WHERE id=?"
-		totalCoin := user.IsuCoin + obtainAmount
-		if _, err := tx.Exec(query, totalCoin, user.ID); err != nil {
-			return nil, nil, nil, err
-		}
-		obtainCoins = append(obtainCoins, obtainAmount)
+	// coin
+	query := "SELECT * FROM users WHERE id IN (?)"
+	sqlx.In(query, obtainCoinsId)
+	users := make([]*User, 0)
+	if err := tx.Select(&users, query, obtainCoinsId...); err != nil {
+		return nil, nil, nil, err
+	}
+	totalCoins
+	for _, user := range users {
+		totalCoin := user.IsuCoin + obtainCoins[user.ID].obtainAmount
+	}
+
+	"INSERT INTO
+    example (`id`, `name`)
+VALUES
+    (1, "Isac"),
+    (2, "James")
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);"
+	query = "UPDATE users SET isu_coin=? WHERE id=?"
+	if _, err := tx.Exec(query, totalCoin, user.ID); err != nil {
+		return nil, nil, nil, err
+	}
 
 	case 2: // card(ハンマー)
 		query := "SELECT * FROM item_masters WHERE id=? AND item_type=?"
