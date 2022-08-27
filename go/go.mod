@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/google/uuid v1.3.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/labstack/echo/v4 v4.8.0
 	github.com/logica0419/helpisu v0.11.0
@@ -17,6 +16,7 @@ require (
 	github.com/bytedance/sonic v1.4.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20220526154910-8bf9453eb81a // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.1.1 // indirect
 	github.com/labstack/gommon v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
