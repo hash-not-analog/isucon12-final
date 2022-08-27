@@ -138,7 +138,7 @@ CREATE TABLE `present_all_masters` (
 CREATE TABLE `user_present_all_received_history` (
   `id` bigint NOT NULL,
   `user_id` bigint NOT NULL comment '受けとったユーザID',
-  `present_all_id` bigint NOT NULL comment '全員プレゼントマスタのID',
+  `present_all_id` bigint NOT NULgacha_mastersL comment '全員プレゼントマスタのID',
   `received_at` bigint NOT NULL comment '受け取った日時',
   `created_at` bigint NOT NULL,
   `updated_at` bigint NOT NULL,
@@ -157,7 +157,8 @@ CREATE TABLE `gacha_masters` (
   `end_at` bigint NOT NULL comment '終了日時',
   `display_order` int(2) comment 'ガチャ台の表示順,小さいほど左に表示',
   `created_at` bigint NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`, `start_at`, `end_at`),
+  INDEX start_end_idx (`start_at` ASC, `end_at` ASC)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin;
 
 CREATE TABLE `gacha_item_masters` (
