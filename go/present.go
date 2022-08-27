@@ -187,10 +187,9 @@ type ReceivePresentResponse struct {
 	UpdatedResources *UpdatedResource `json:"updatedResources"`
 }
 
-type UserCoin struct {
-}
-
 func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
+	userCoins := make([]*User, 0, len(obtainCoins))
+
 	for i := range obtainCoins {
 		user := new(User)
 		query := "SELECT * FROM users WHERE id=?"
@@ -201,11 +200,16 @@ func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
 			return err
 		}
 
-		query = "UPDATE users SET isu_coin=? WHERE id=?"
-		totalCoin := user.IsuCoin + int64(obtainCoins[i].Amount)
-		if _, err := tx.Exec(query, totalCoin, user.ID); err != nil {
-			return err
-		}
+		user.IsuCoin = user.IsuCoin + int64(obtainCoins[i].Amount)
+		userCoins = append(userCoins, user)
+	}
+
+	// query := "UPDATE users SET isu_coin=? WHERE id=?"
+	query := "INSERT INTO users(id, last_activated_at, registered_at, last_getreward_at, created_at, updated_at)" +
+		" VALUES(:id, :last_activated_at, :registered_at, :last_getreward_at, :created_at, :updated_at)" +
+		" ON DUPLICATE KEY UPDATE isu_coin = VALUES(isu_coin)"
+	if _, err := tx.Exec(query, userCoins); err != nil {
+		return err
 	}
 
 	return nil
