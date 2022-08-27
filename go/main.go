@@ -141,6 +141,16 @@ func connectDB(batch bool) (*sqlx.DB, error) {
 	// アイドル接続してから再利用できる最大期間
 	dbx.SetConnMaxIdleTime(0)
 
+	// WaitDBStartUp DBの起動を待機する
+	for {
+		err := dbx.Ping()
+		if err == nil {
+			break
+		}
+
+		time.Sleep(time.Second * 2)
+	}
+
 	return dbx, nil
 }
 
