@@ -184,31 +184,50 @@ func (h *Handler) obtainItem(tx *sqlx.Tx, obtainPresents []*UserPresent, request
 }
 
 func (h *Handler) obtainCoin(tx *sqlx.Tx, obtainCoins map[int64]*UserPresent, obtainCoinsId []int64, requestAt int64) error {
-	query := "SELECT * FROM users WHERE id IN (?)"
-	query, params, err := sqlx.In(query, obtainCoinsId)
-	if err != nil {
-		return err
-	}
-	users := make([]*User, 0)
-	if err := tx.Select(&users, query, params...); err != nil {
-		return err
-	}
+	for _, obtainCoin := range obtainCoins {
+		obtainAmount := obtainCoin.Amount
+		userID := obtainCoin.UserID
 
-	type BulkUpdateIsuCoin struct {
-		UserID    int64 `db:"id"`
-		TotalCoin int64 `db:"isu_coin"`
+		user := new(User)
+		query := "SELECT * FROM users WHERE id=?"
+		if err := tx.Get(user, query, userID); err != nil {
+			if err == sql.ErrNoRows {
+				return ErrUserNotFound
+			}
+			return err
+		}
+
+		query = "UPDATE users SET isu_coin=? WHERE id=?"
+		totalCoin := user.IsuCoin + int64(obtainAmount)
+		if _, err := tx.Exec(query, totalCoin, user.ID); err != nil {
+			return err
+		}
 	}
-	totalCoins := []BulkUpdateIsuCoin{}
-	for _, user := range users {
-		totalCoins = append(totalCoins, BulkUpdateIsuCoin{
-			UserID:    user.ID,
-			TotalCoin: user.IsuCoin + int64(obtainCoins[user.ID].Amount),
-		})
-	}
-	query = "INSERT INTO users (`id`, `isu_coin`) VALUES (:id, :isu_coin) ON DUPLICATE KEY UPDATE `isu_coin` = VALUES(`isu_coin`)"
-	if _, err := tx.NamedExec(query, totalCoins); err != nil {
-		return err
-	}
+	// query := "SELECT * FROM users WHERE id IN (?)"
+	// query, params, err := sqlx.In(query, obtainCoinsId)
+	// if err != nil {
+	// 	return err
+	// }
+	// users := make([]*User, 0)
+	// if err := tx.Select(&users, query, params...); err != nil {
+	// 	return err
+	// }
+
+	// type BulkUpdateIsuCoin struct {
+	// 	UserID    int64 `db:"id"`
+	// 	TotalCoin int64 `db:"isu_coin"`
+	// }
+	// totalCoins := []BulkUpdateIsuCoin{}
+	// for _, user := range users {
+	// 	totalCoins = append(totalCoins, BulkUpdateIsuCoin{
+	// 		UserID:    user.ID,
+	// 		TotalCoin: user.IsuCoin + int64(obtainCoins[user.ID].Amount),
+	// 	})
+	// }
+	// query = "INSERT INTO users (`id`, `isu_coin`) VALUES (:id, :isu_coin) ON DUPLICATE KEY UPDATE `isu_coin` = VALUES(`isu_coin`)"
+	// if _, err := tx.NamedExec(query, totalCoins); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
