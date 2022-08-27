@@ -278,9 +278,9 @@ func (h *Handler) obtainCards(tx *sqlx.Tx, obtainCards []*UserPresent) error {
 }
 
 func (h *Handler) obtainGems(tx *sqlx.Tx, obtainGems []*UserPresent) error {
-	query := "SELECT * FROM item_masters WHERE item_type=?"
+	query := "SELECT * FROM item_masters"
 	items := []*ItemMaster{}
-	if err := tx.Select(&items, query, 3); err != nil {
+	if err := tx.Select(&items, query); err != nil {
 		return err
 	}
 
