@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/logica0419/helpisu"
 )
 
 // adminUser ユーザの詳細画面
@@ -92,6 +93,8 @@ type AdminUserResponse struct {
 
 // adminBanUser ユーザBAN処理
 // POST /admin/user/{userId}/ban
+var userBanCache = helpisu.NewCache[int64, UserBan]()
+
 func (h *Handler) adminBanUser(c echo.Context) error {
 	userID, err := getUserID(c)
 	if err != nil {
@@ -112,14 +115,11 @@ func (h *Handler) adminBanUser(c echo.Context) error {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 
-	banID, err := h.generateID()
-	if err != nil {
-		return errorResponse(c, http.StatusInternalServerError, err)
-	}
-	query = "INSERT user_bans(id, user_id, created_at, updated_at) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE updated_at = ?"
-	if _, err = h.DB.Exec(query, banID, userID, requestAt, requestAt, requestAt); err != nil {
-		return errorResponse(c, http.StatusInternalServerError, err)
-	}
+	userBanCache.Set(userID, UserBan{
+		UserID:    userID,
+		CreatedAt: requestAt,
+		UpdatedAt: requestAt,
+	})
 
 	return successResponse(c, &AdminBanUserResponse{
 		User: user,
