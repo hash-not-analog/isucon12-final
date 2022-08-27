@@ -143,11 +143,9 @@ CREATE TABLE `user_present_all_received_history` (
   `created_at` bigint NOT NULL,
   `updated_at` bigint NOT NULL,
   `deleted_at` bigint default NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  INDEX user_present_all_index (`user_id`, `present_all_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin;
-
-ALTER TABLE `user_present_all_received_history`
-ADD INDEX user_present_all_index(`user_id`, `present_all_id`);
 
 /* ガチャマスタ */
 CREATE TABLE `gacha_masters` (
@@ -234,11 +232,9 @@ CREATE TABLE `user_sessions` (
   `expired_at` bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`session_id`),
-  UNIQUE uniq_session_id (`user_id`, `session_id`, `deleted_at`)
+  UNIQUE uniq_session_id (`user_id`, `session_id`, `deleted_at`),
+  INDEX user_id_index(`user_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin;
-
-ALTER TABLE `user_sessions`
-ADD INDEX user_id_index(`user_id`);
 
 /* 更新処理について利用するone time tokenの管理 */
 CREATE TABLE `user_one_time_tokens` (
