@@ -209,7 +209,7 @@ func (h *Handler) checkSessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 		}
 
 		userSession := new(Session)
-		query := "SELECT * FROM user_sessions WHERE session_id=? AND expired_at < ?"
+		query := "SELECT * FROM user_sessions WHERE session_id=? AND expired_at > ?"
 		if err := h.DB.Get(userSession, query, sessID, requestAt); err != nil {
 			if err == sql.ErrNoRows {
 				return errorResponse(c, http.StatusUnauthorized, ErrUnauthorized)
