@@ -167,7 +167,7 @@ CREATE TABLE `gacha_item_masters` (
   `weight` int NOT NULL comment '確率。万分率で表示',
   `created_at` bigint NOT NULL,
   PRIMARY KEY (`gacha_id`, `id`),
-  UNIQUE uniq_item_id (`gacha_id`, `item_type`, `item_id`),
+  UNIQUE uniq_item_id (`gacha_id`, `item_type`, `item_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin;
 
 CREATE TABLE `user_items` (
@@ -230,7 +230,8 @@ CREATE TABLE `user_sessions` (
   `expired_at` bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`session_id`),
-  UNIQUE uniq_session_id (`user_id`, `session_id`, `deleted_at`)
+  UNIQUE uniq_session_id (`user_id`, `session_id`, `deleted_at`),
+  user_id_index(`user_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin;
 
 /* 更新処理について利用するone time tokenの管理 */
