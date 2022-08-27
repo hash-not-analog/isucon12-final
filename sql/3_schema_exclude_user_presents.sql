@@ -138,7 +138,7 @@ CREATE TABLE `present_all_masters` (
 CREATE TABLE `user_present_all_received_history` (
   `id` bigint NOT NULL,
   `user_id` bigint NOT NULL comment '受けとったユーザID',
-  `present_all_id` bigint NOT NULgacha_mastersL comment '全員プレゼントマスタのID',
+  `present_all_id` bigint NOT NULL comment '全員プレゼントマスタのID',
   `received_at` bigint NOT NULL comment '受け取った日時',
   `created_at` bigint NOT NULL,
   `updated_at` bigint NOT NULL,
