@@ -458,7 +458,7 @@ func (h *Handler) obtainPresent(tx *sqlx.Tx, userID int64, requestAt int64) ([]*
 	query = "SELECT present_all_masters.id FROM present_all_masters" +
 		" JOIN user_present_all_received_history ON user_present_all_received_history.present_all_id = present_all_masters.id" +
 		" WHERE user_present_all_received_history.user_id=?"
-	if err := tx.Select(&receivedPresentsID, query, userID, requestAt, requestAt); err != nil {
+	if err := tx.Select(&receivedPresentsID, query, userID); err != nil {
 		return nil, err
 	}
 
