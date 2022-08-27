@@ -278,31 +278,45 @@ func (h *Handler) obtainCards(tx *sqlx.Tx, obtainCards []*UserPresent) error {
 }
 
 func (h *Handler) obtainGems(tx *sqlx.Tx, obtainGems []*UserPresent) error {
+	query := "SELECT * FROM item_masters WHERE item_type=?"
+	items := []*ItemMaster{}
+	if err := tx.Select(&items, query, 3); err != nil {
+		return err
+	}
+
+	uItemsMap := make(map[string]*UserItem, len(obtainGems))
+
 	for i := range obtainGems {
-		query := "SELECT * FROM item_masters WHERE id=? AND item_type=?"
-		item := new(ItemMaster)
-		if err := tx.Get(item, query, obtainGems[i].ItemID, obtainGems[i].ItemType); err != nil {
-			if err == sql.ErrNoRows {
-				return ErrItemNotFound
+		var item *ItemMaster
+		for j := range items {
+			if obtainGems[i].ItemID == items[j].ID {
+				item = items[j]
 			}
-			return err
 		}
-		// 所持数取得
-		query = "SELECT * FROM user_items WHERE user_id=? AND item_id=?"
-		uItem := new(UserItem)
-		if err := tx.Get(uItem, query, obtainGems[i].UserID, item.ID); err != nil {
-			if err != sql.ErrNoRows {
-				return err
-			}
-			uItem = nil
+		if item == nil {
+			return ErrItemNotFound
 		}
 
-		if uItem == nil { // 新規作成
+		// 所持数取得
+		index := strconv.Itoa(int(obtainGems[i].UserID)) + strconv.Itoa(int(item.ID))
+		_, ok := uItemsMap[index]
+		if !ok {
+			query = "SELECT * FROM user_items WHERE user_id=? AND item_id=?"
+			uItemsMap[index] = new(UserItem)
+			if err := tx.Get(uItemsMap[index], query, obtainGems[i].UserID, item.ID); err != nil {
+				if err != sql.ErrNoRows {
+					return err
+				}
+				uItemsMap[index] = nil
+			}
+		}
+
+		if uItemsMap[index] == nil { // 新規作成
 			uItemID, err := h.generateID()
 			if err != nil {
 				return err
 			}
-			uItem = &UserItem{
+			uItemsMap[index] = &UserItem{
 				ID:        uItemID,
 				UserID:    obtainGems[i].UserID,
 				ItemType:  item.ItemType,
@@ -311,19 +325,28 @@ func (h *Handler) obtainGems(tx *sqlx.Tx, obtainGems []*UserPresent) error {
 				CreatedAt: obtainGems[i].UpdatedAt,
 				UpdatedAt: obtainGems[i].UpdatedAt,
 			}
-			query = "INSERT INTO user_items(id, user_id, item_id, item_type, amount, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-			if _, err := tx.Exec(query, uItem.ID, uItem.UserID, uItem.ItemID, uItem.ItemType, uItem.Amount, uItem.CreatedAt, uItem.UpdatedAt); err != nil {
-				return err
-			}
-
 		} else { // 更新
-			uItem.Amount += int(obtainGems[i].Amount)
-			uItem.UpdatedAt = obtainGems[i].UpdatedAt
-			query = "UPDATE user_items SET amount=?, updated_at=? WHERE id=?"
-			if _, err := tx.Exec(query, uItem.Amount, uItem.UpdatedAt, uItem.ID); err != nil {
-				return err
-			}
+			uItemsMap[index].Amount += int(obtainGems[i].Amount)
+			uItemsMap[index].UpdatedAt = obtainGems[i].UpdatedAt
 		}
+	}
+
+	uItems := make([]*UserItem, 0, len(uItemsMap))
+	for _, v := range uItemsMap {
+		if v != nil {
+			uItems = append(uItems, v)
+		}
+	}
+
+	if len(uItems) <= 0 {
+		return nil
+	}
+
+	query = "INSERT INTO user_items(id, user_id, item_id, item_type, amount, created_at, updated_at)" +
+		" VALUES (:id, :user_id, :item_id, :item_type, :amount, :created_at, :updated_at)" +
+		" ON DUPLICATE KEY UPDATE amount = VALUES(amount), updated_at=VALUES(updated_at)"
+	if _, err := tx.Exec(query, uItemsMap); err != nil {
+		return err
 	}
 
 	return nil
