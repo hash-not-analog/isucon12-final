@@ -231,7 +231,7 @@ func (h *Handler) login(c echo.Context) error {
 	defer tx.Rollback() //nolint:errcheck
 
 	// sessionを更新
-	query = "UPDATE user_sessions SET deleted_at=? WHERE user_id=? AND deleted_at IS NULL"
+	query = "DELETE FROM user_sessions WHERE user_id=?"
 	if _, err = tx.Exec(query, requestAt, req.UserID); err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
