@@ -228,15 +228,9 @@ func (h *Handler) drawGacha(c echo.Context) error {
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	tx2, err := h.DB2.Beginx()
-	if err != nil {
-		return errorResponse(c, http.StatusInternalServerError, err)
-	}
-	defer tx.Rollback() //nolint:errcheck
-
 	query = "INSERT INTO user_presents(id, user_id, sent_at, item_type, item_id, amount, present_message, created_at, updated_at)" +
 		" VALUES (:id, :user_id, :sent_at, :item_type, :item_id, :amount, :present_message, :created_at, :updated_at)"
-	if _, err := tx2.NamedExec(query, presents); err != nil {
+	if _, err := tx.NamedExec(query, presents); err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 
@@ -248,11 +242,6 @@ func (h *Handler) drawGacha(c echo.Context) error {
 	}
 
 	err = tx.Commit()
-	if err != nil {
-		return errorResponse(c, http.StatusInternalServerError, err)
-	}
-
-	err = tx2.Commit()
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
