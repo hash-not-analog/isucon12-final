@@ -29,7 +29,7 @@ func (h *Handler) adminListMaster(c echo.Context) error {
 	}
 
 	gachaItems := make([]*GachaItemMaster, 0)
-	if err := h.DB.Select(&gachaItems, "SELECT * FROM gacha_item_masters"); err != nil {
+	if err := h.DB.Select(&gachaItems, "SELECT * FROM gacha_item_masters ORDER BY id ASC"); err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 
