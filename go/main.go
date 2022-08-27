@@ -78,6 +78,11 @@ func main() {
 		DB: dbx,
 	}
 
+	http.DefaultTransport.(*http.Transport).MaxIdleConns = 0           // default: 100
+	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 1024 // default: 2
+	http.DefaultTransport.(*http.Transport).ForceAttemptHTTP2 = true
+	http.DefaultClient.Timeout = 5 * time.Second // 問題の切り分け用
+
 	// e.Use(middleware.CORS())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{}))
 
@@ -117,7 +122,7 @@ func main() {
 
 func connectDB(batch bool) (*sqlx.DB, error) {
 	dsn := fmt.Sprintf(
-		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=%s&multiStatements=%t",
+		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=%s&multiStatements=%t&interpolateParams=true",
 		getEnv("ISUCON_DB_USER", "isucon"),
 		getEnv("ISUCON_DB_PASSWORD", "isucon"),
 		getEnv("ISUCON_DB_HOST", "127.0.0.1"),
@@ -130,6 +135,13 @@ func connectDB(batch bool) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	// プール内に保持できるアイドル接続数の制限を設定 (default: 2)
+	dbx.SetMaxIdleConns(1024)
+	// 接続してから再利用できる最大期間
+	dbx.SetConnMaxLifetime(0)
+	// アイドル接続してから再利用できる最大期間
+	dbx.SetConnMaxIdleTime(0)
+
 	return dbx, nil
 }
 
