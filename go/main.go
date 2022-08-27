@@ -85,6 +85,7 @@ func main() {
 	// utility
 	e.POST("/initialize", initialize)
 	e.GET("/health", h.health)
+	e.GET("/admin/generate", h.GenerateID)
 
 	// feature
 	API := e.Group("", h.apiMiddleware)
@@ -474,10 +475,35 @@ func noContentResponse(c echo.Context, status int) error {
 	return c.NoContent(status)
 }
 
+func (h *Handler) GenerateID(c echo.Context) error {
+	id, _ := h.generateID()
+	return c.Blob(http.StatusOK, "text/plain", []byte(strconv.Itoa(int(id))))
+}
+
 var duplicatedIDMap = helpisu.NewCache[int, struct{}]()
 
 // generateID uniqueなIDを生成する
 func (h *Handler) generateID() (int64, error) {
+	if root := os.Getenv("id_root"); root != "" {
+		resp, err := http.Get(fmt.Sprintf("http://%s:8080/generate", root))
+		if err != nil {
+			return 0, err
+		}
+		defer resp.Body.Close()
+
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return 0, err
+		}
+
+		id, err := strconv.Atoi(string(b))
+		if err != nil {
+			return 0, nil
+		}
+
+		return int64(id), nil
+	}
+
 	var id int
 
 	for {
