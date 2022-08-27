@@ -3,6 +3,8 @@
 [Unit]
 Description=MySQL Community Server
 After=network.target
+StartLimitIntervalSec=20
+StartLimitBurst=200
 
 [Install]
 WantedBy=multi-user.target
@@ -24,7 +26,3 @@ Restart=always
 
 # Set enviroment variable MYSQLD_PARENT_PID. This is required for restart.
 Environment=MYSQLD_PARENT_PID=1
-
-[Manager]
-DefaultStartLimitInterval=20s
-DefaultStartLimitBurst=200
