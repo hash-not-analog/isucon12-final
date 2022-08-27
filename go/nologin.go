@@ -371,6 +371,9 @@ func (h *Handler) obtainLoginBonus(tx *sqlx.Tx, userID int64, requestAt int64) (
 	}
 
 	sendLoginBonuses := make([]*UserLoginBonus, 0)
+	obtainCoins := []*UserPresent{}
+	obtainCards := []*UserPresent{}
+	obtainGems := []*UserPresent{}
 
 	for _, bonus := range loginBonuses {
 		initBonus := false
@@ -422,9 +425,6 @@ func (h *Handler) obtainLoginBonus(tx *sqlx.Tx, userID int64, requestAt int64) (
 			return nil, err
 		}
 
-		obtainCoins := []*UserPresent{}
-		obtainCards := []*UserPresent{}
-		obtainGems := []*UserPresent{}
 		currentItem := &UserPresent{
 			UserID:    userID,
 			SentAt:    requestAt,
@@ -459,22 +459,22 @@ func (h *Handler) obtainLoginBonus(tx *sqlx.Tx, userID int64, requestAt int64) (
 			}
 		}
 
-		err := h.obtainCoins(tx, obtainCoins)
-		if err != nil {
-			return nil, err
-		}
-
-		err = h.obtainCards(tx, obtainCards)
-		if err != nil {
-			return nil, err
-		}
-
-		err = h.obtainGems(tx, obtainGems)
-		if err != nil {
-			return nil, err
-		}
-
 		sendLoginBonuses = append(sendLoginBonuses, userBonus)
+	}
+
+	err := h.obtainCoins(tx, obtainCoins)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.obtainCards(tx, obtainCards)
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.obtainGems(tx, obtainGems)
+	if err != nil {
+		return nil, err
 	}
 
 	return sendLoginBonuses, nil
