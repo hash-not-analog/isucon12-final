@@ -157,7 +157,8 @@ CREATE TABLE `gacha_masters` (
   `end_at` bigint NOT NULL comment '終了日時',
   `display_order` int(2) comment 'ガチャ台の表示順,小さいほど左に表示',
   `created_at` bigint NOT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`, `start_at`, `end_at`),
+  INDEX start_end_idx (`start_at` ASC, `end_at` ASC)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin;
 
 CREATE TABLE `gacha_item_masters` (
@@ -168,7 +169,7 @@ CREATE TABLE `gacha_item_masters` (
   `amount` int NOT NULL comment 'アイテム数',
   `weight` int NOT NULL comment '確率。万分率で表示',
   `created_at` bigint NOT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`gacha_id`, `id`),
   UNIQUE uniq_item_id (`gacha_id`, `item_type`, `item_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin;
 
