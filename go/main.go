@@ -485,7 +485,7 @@ var duplicatedIDMap = helpisu.NewCache[int, struct{}]()
 // generateID uniqueなIDを生成する
 func (h *Handler) generateID() (int64, error) {
 	if root := os.Getenv("id_root"); root != "" {
-		resp, err := http.Get(fmt.Sprintf("http://%s:8080/generate", root))
+		resp, err := http.Get(fmt.Sprintf("http://%s:8080/admin/generate", root))
 		if err != nil {
 			return 0, err
 		}
