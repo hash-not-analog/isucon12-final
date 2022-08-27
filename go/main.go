@@ -46,7 +46,9 @@ const (
 )
 
 type Handler struct {
-	DB *sqlx.DB
+	DB  *sqlx.DB
+	DB2 *sqlx.DB
+	DB3 *sqlx.DB
 }
 
 var d = helpisu.NewDBDisconnectDetector(5, 80)
@@ -316,28 +318,32 @@ func getRequestTime(c echo.Context) (int64, error) {
 // initialize 初期化処理
 // POST /initialize
 func initialize(c echo.Context) error {
-	dbx, err := connectDB(true, 1)
-	if err != nil {
-		return errorResponse(c, http.StatusInternalServerError, err)
-	}
-	defer dbx.Close()
-
-	out, err := exec.Command("/bin/sh", "-c", SQLDirectory+"init.sh").CombinedOutput()
-	if err != nil {
-		c.Logger().Errorf("Failed to initialize %s: %v", string(out), err)
-		return errorResponse(c, http.StatusInternalServerError, err)
-	}
-
 	helpisu.ResetAllCache()
 
-	var banUsers []*UserBan
-	query := "SELECT * FROM user_bans"
-	if err := dbx.Select(&banUsers, query); err != nil {
-		c.Logger().Errorf("Failed to initialize: %v", err)
-		return errorResponse(c, http.StatusInternalServerError, err)
-	}
-	for _, banUser := range banUsers {
-		userBanCache.Set(banUser.UserID, *banUser)
+	for i := 1; i <= 1; i++ {
+		go func(i int) {
+			dbx, err := connectDB(true, i)
+			if err != nil {
+				return
+			}
+			defer dbx.Close()
+
+			out, err := exec.Command("/bin/sh", "-c", SQLDirectory+"init.sh").CombinedOutput()
+			if err != nil {
+				c.Logger().Errorf("Failed to initialize %s: %v", string(out), err)
+				return
+			}
+
+			var banUsers []*UserBan
+			query := "SELECT * FROM user_bans"
+			if err := dbx.Select(&banUsers, query); err != nil {
+				c.Logger().Errorf("Failed to initialize: %v", err)
+				return
+			}
+			for _, banUser := range banUsers {
+				userBanCache.Set(banUser.UserID, *banUser)
+			}
+		}(i)
 	}
 
 	d.Pause()
