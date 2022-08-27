@@ -249,6 +249,10 @@ func (h *Handler) obtainCards(tx *sqlx.Tx, obtainCards []*UserPresent) error {
 		cards = append(cards, card)
 	}
 
+	if len(cards) <= 0 {
+		return nil
+	}
+
 	query = "INSERT INTO user_cards(id, user_id, card_id, amount_per_sec, level, total_exp, created_at, updated_at)" +
 		" VALUES (:id, :user_id, :card_id, :amount_per_sec, :level, :total_exp, :created_at, :updated_at)"
 	if _, err := tx.NamedExec(query, cards); err != nil {
