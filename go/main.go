@@ -78,11 +78,6 @@ func main() {
 		DB: dbx,
 	}
 
-	http.DefaultTransport.(*http.Transport).MaxIdleConns = 0           // default: 100
-	http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 1024 // default: 2
-	http.DefaultTransport.(*http.Transport).ForceAttemptHTTP2 = true
-	http.DefaultClient.Timeout = 5 * time.Second // 問題の切り分け用
-
 	// e.Use(middleware.CORS())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{}))
 
