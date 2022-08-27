@@ -125,8 +125,17 @@ func (h *Handler) receivePresent(c echo.Context) error {
 	}
 
 	for i := range obtainPresent {
-		query = "DELETE FROM user_presents WHERE id=?"
-		_, err := tx.Exec(query, obtainPresent[i].ID)
+		if obtainPresent[i].DeletedAt != nil {
+			return errorResponse(c, http.StatusInternalServerError, fmt.Errorf("received present"))
+		}
+
+		obtainPresent[i].UpdatedAt = requestAt
+		obtainPresent[i].DeletedAt = &requestAt
+		v := obtainPresent[i]
+		// query = "DELETE FROM user_presents WHERE id=?"
+		// _, err := tx.Exec(query, obtainPresent[i].ID)
+		query = "UPDATE user_presents SET deleted_at=?, updated_at=? WHERE id=?"
+		_, err := tx.Exec(query, requestAt, requestAt, v.ID)
 		if err != nil {
 			return errorResponse(c, http.StatusInternalServerError, err)
 		}
