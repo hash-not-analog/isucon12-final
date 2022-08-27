@@ -305,15 +305,15 @@ func (h *Handler) obtainItem(tx *sqlx.Tx, obtainPresents []*UserPresent, request
 	obtainCoins := map[int64]*UserPresent{}
 	obtainCards := map[int64]*UserPresent{}
 	obtainItems := map[int64]*UserPresent{}
-	obtainCoinsIds := make([]int64, 0)
-	obtainCardsIds := make([]int64, 0)
-	obtainItemsIds := make([]int64, 0)
+	obtainCoinsId := make([]int64, 0)
+	obtainCardsId := make([]int64, 0)
+	obtainItemsId := make([]int64, 0)
 
 	for _, obtainPresent := range obtainPresents {
 		switch obtainPresent.ItemType {
 		case 1: // coin
 			obtainCoins[obtainPresent.UserID] = obtainPresent
-			obtainCoinsId = append(obtainCoinsIds, obtainPresent.UserID)
+			obtainCoinsId = append(obtainCoinsId, obtainPresent.UserID)
 		case 2: // card(ハンマー)
 			obtainCards[obtainPresent.UserID] = obtainPresent
 			obtainCardsId = append(obtainCardsId, obtainPresent.UserID)
@@ -325,113 +325,114 @@ func (h *Handler) obtainItem(tx *sqlx.Tx, obtainPresents []*UserPresent, request
 		}
 	}
 
-	// coin
+	obtainCoin(obtainCoins, obtainCoinsId)
+	obtainCard(obtainCards, obtainCardsId)
+	obtainItem(obtainItems, obtainItemsId)
+
+	return nil, nil, nil, nil
+}
+
+func obtainCoin(obtainCoins map[int64]*UserPresent, obtainCoinsId []int64) error {
 	query := "SELECT * FROM users WHERE id IN (?)"
-	sqlx.In(query, obtainCoinsId)
-	users := make([]*User, 0)
-	if err := tx.Select(&users, query, obtainCoinsId...); err != nil {
-		return nil, nil, nil, err
+	query, params, err := sqlx.In(query, obtainCoinsId)
+	if err != nil {
+		return err
 	}
-	totalCoins
-	for _, user := range users {
-		totalCoin := user.IsuCoin + obtainCoins[user.ID].obtainAmount
+	users := make([]*User, 0)
+	if err := tx.Select(&users, query, params...); err != nil {
+		return err
 	}
 
-	"INSERT INTO
-    example (`id`, `name`)
-VALUES
-    (1, "Isac"),
-    (2, "James")
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);"
-	query = "UPDATE users SET isu_coin=? WHERE id=?"
+	totalCoins := map[int64]int64{}
+	for _, user := range users {
+		totalCoins[user.ID] = user.IsuCoin + obtainCoins[user.ID].obtainAmount
+	}
+
+	query = "INSERT INTO users (`id`, `isu_coin`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `isu_coin` = VALUES(`isu_coin`)"
 	if _, err := tx.Exec(query, totalCoin, user.ID); err != nil {
 		return nil, nil, nil, err
 	}
+}
 
-	case 2: // card(ハンマー)
-		query := "SELECT * FROM item_masters WHERE id=? AND item_type=?"
-		item := new(ItemMaster)
-		if err := tx.Get(item, query, itemID, itemType); err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil, nil, ErrItemNotFound
-			}
+func obtainCard(obtainCards map[int64]*UserPresent, obtainCardsId []int64) error {
+	query := "SELECT * FROM item_masters WHERE id=? AND item_type=?"
+	item := new(ItemMaster)
+	if err := tx.Get(item, query, itemID, itemType); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, nil, ErrItemNotFound
+		}
+		return nil, nil, nil, err
+	}
+
+	cID, err := h.generateID()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	card := &UserCard{
+		ID:           cID,
+		UserID:       userID,
+		CardID:       item.ID,
+		AmountPerSec: *item.AmountPerSec,
+		Level:        1,
+		TotalExp:     0,
+		CreatedAt:    requestAt,
+		UpdatedAt:    requestAt,
+	}
+	query = "INSERT INTO user_cards(id, user_id, card_id, amount_per_sec, level, total_exp, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+	if _, err := tx.Exec(query, card.ID, card.UserID, card.CardID, card.AmountPerSec, card.Level, card.TotalExp, card.CreatedAt, card.UpdatedAt); err != nil {
+		return nil, nil, nil, err
+	}
+	obtainCards = append(obtainCards, card)
+}
+
+func obtainItem(obtainItems map[int64]*UserPresent, obtainItemsId []int64) error {
+	query := "SELECT * FROM item_masters WHERE id=? AND item_type=?"
+	item := new(ItemMaster)
+	if err := tx.Get(item, query, itemID, itemType); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, nil, ErrItemNotFound
+		}
+		return nil, nil, nil, err
+	}
+	// 所持数取得
+	query = "SELECT * FROM user_items WHERE user_id=? AND item_id=?"
+	uitem := new(UserItem)
+	if err := tx.Get(uitem, query, userID, item.ID); err != nil {
+		if err != sql.ErrNoRows {
 			return nil, nil, nil, err
 		}
+		uitem = nil
+	}
 
-		cID, err := h.generateID()
+	if uitem == nil { // 新規作成
+		uitemID, err := h.generateID()
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		card := &UserCard{
-			ID:           cID,
-			UserID:       userID,
-			CardID:       item.ID,
-			AmountPerSec: *item.AmountPerSec,
-			Level:        1,
-			TotalExp:     0,
-			CreatedAt:    requestAt,
-			UpdatedAt:    requestAt,
+		uitem = &UserItem{
+			ID:        uitemID,
+			UserID:    userID,
+			ItemType:  item.ItemType,
+			ItemID:    item.ID,
+			Amount:    int(obtainAmount),
+			CreatedAt: requestAt,
+			UpdatedAt: requestAt,
 		}
-		query = "INSERT INTO user_cards(id, user_id, card_id, amount_per_sec, level, total_exp, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-		if _, err := tx.Exec(query, card.ID, card.UserID, card.CardID, card.AmountPerSec, card.Level, card.TotalExp, card.CreatedAt, card.UpdatedAt); err != nil {
+		query = "INSERT INTO user_items(id, user_id, item_id, item_type, amount, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+		if _, err := tx.Exec(query, uitem.ID, userID, uitem.ItemID, uitem.ItemType, uitem.Amount, requestAt, requestAt); err != nil {
 			return nil, nil, nil, err
 		}
-		obtainCards = append(obtainCards, card)
 
-	case 3, 4: // 強化素材
-		query := "SELECT * FROM item_masters WHERE id=? AND item_type=?"
-		item := new(ItemMaster)
-		if err := tx.Get(item, query, itemID, itemType); err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil, nil, ErrItemNotFound
-			}
+	} else { // 更新
+		uitem.Amount += int(obtainAmount)
+		uitem.UpdatedAt = requestAt
+		query = "UPDATE user_items SET amount=?, updated_at=? WHERE id=?"
+		if _, err := tx.Exec(query, uitem.Amount, uitem.UpdatedAt, uitem.ID); err != nil {
 			return nil, nil, nil, err
 		}
-		// 所持数取得
-		query = "SELECT * FROM user_items WHERE user_id=? AND item_id=?"
-		uitem := new(UserItem)
-		if err := tx.Get(uitem, query, userID, item.ID); err != nil {
-			if err != sql.ErrNoRows {
-				return nil, nil, nil, err
-			}
-			uitem = nil
-		}
-
-		if uitem == nil { // 新規作成
-			uitemID, err := h.generateID()
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			uitem = &UserItem{
-				ID:        uitemID,
-				UserID:    userID,
-				ItemType:  item.ItemType,
-				ItemID:    item.ID,
-				Amount:    int(obtainAmount),
-				CreatedAt: requestAt,
-				UpdatedAt: requestAt,
-			}
-			query = "INSERT INTO user_items(id, user_id, item_id, item_type, amount, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-			if _, err := tx.Exec(query, uitem.ID, userID, uitem.ItemID, uitem.ItemType, uitem.Amount, requestAt, requestAt); err != nil {
-				return nil, nil, nil, err
-			}
-
-		} else { // 更新
-			uitem.Amount += int(obtainAmount)
-			uitem.UpdatedAt = requestAt
-			query = "UPDATE user_items SET amount=?, updated_at=? WHERE id=?"
-			if _, err := tx.Exec(query, uitem.Amount, uitem.UpdatedAt, uitem.ID); err != nil {
-				return nil, nil, nil, err
-			}
-		}
-
-		obtainItems = append(obtainItems, uitem)
-
-	default:
-		return nil, nil, nil, ErrInvalidItemType
 	}
 
-	return obtainCoins, obtainCards, obtainItems, nil
+	obtainItems = append(obtainItems, uitem)
 }
 
 // initialize 初期化処理
