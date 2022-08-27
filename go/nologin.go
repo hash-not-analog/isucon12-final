@@ -454,21 +454,29 @@ func (h *Handler) obtainPresent(tx *sqlx.Tx, userID int64, requestAt int64) ([]*
 		return nil, err
 	}
 
+	receivedPresentsID := make([]int64, 0)
+	query = "SELECT id FROM present_all_masters" +
+		" JOIN user_present_all_received_history ON user_present_all_received_history.present_all_id = present_all_masters.id" +
+		" WHERE user_id=?"
+	if err := tx.Select(&receivedPresentsID, query, userID, requestAt, requestAt); err != nil {
+		return nil, err
+	}
+
 	ups := make([]*UserPresent, 0, len(normalPresents))
 	histories := make([]*UserPresentAllReceivedHistory, 0, len(normalPresents))
 
 	// 全員プレゼント取得情報更新
 	obtainPresents := make([]*UserPresent, 0)
 	for _, np := range normalPresents {
-		received := new(UserPresentAllReceivedHistory)
-		query = "SELECT * FROM user_present_all_received_history WHERE user_id=? AND present_all_id=?"
-		err := tx.Get(received, query, userID, np.ID)
-		if err == nil {
-			// プレゼント配布済
-			continue
+		skip := false
+		for i := range receivedPresentsID {
+			if receivedPresentsID[i] == np.ID {
+				skip = true
+				break
+			}
 		}
-		if err != sql.ErrNoRows {
-			return nil, err
+		if skip {
+			continue
 		}
 
 		// user present boxに入れる
