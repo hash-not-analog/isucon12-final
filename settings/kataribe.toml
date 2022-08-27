@@ -100,47 +100,47 @@ duration_index = 10
 #name = 'GET /images/*'
 
 [[bundle]]
-regexp = '^GET /user/.+/gacha/index'
+regexp = '^(GET) /user/.+/gacha/index'
 name = 'GET /user/*/gacha/index'
 
 [[bundle]]
-regexp = '^POST /user/.+/gacha/draw/.+/.+'
+regexp = '^(POST) /user/.+/gacha/draw/.+/.+'
 name = 'POST /user/*/gacha/draw/*/*'
 
 [[bundle]]
-regexp = '^GET /user/.+/present/index/.+'
+regexp = '^(GET) /user/.+/present/index/.+'
 name = 'GET /user/*/present/index/*'
 
 [[bundle]]
-regexp = '^POST /user/.+/present/receive'
+regexp = '^(POST) /user/.+/present/receive'
 name = 'POST /user/*/present/receive'
 
 [[bundle]]
-regexp = '^GET /user/.+/item'
+regexp = '^(GET) /user/.+/item'
 name = 'GET /user/*/item'
 
 [[bundle]]
-regexp = '^POST /user/.+/card/addexp/.+'
+regexp = '^(POST) /user/.+/card/addexp/.+'
 name = 'POST /user/*/card/addexp/*'
 
 [[bundle]]
-regexp = '^POST /user/.+/card'
+regexp = '^(POST) /user/.+/card'
 name = 'POST /user/*/card'
 
 [[bundle]]
-regexp = '^POST /user/.+/reward'
+regexp = '^(POST) /user/.+/reward'
 name = 'POST /user/*/reward'
 
 [[bundle]]
-regexp = '^GET /user/.+/home'
+regexp = '^(GET) /user/.+/home'
 name = 'GET /user/*/home'
 
 [[bundle]]
-regexp = '^GET /admin/user/.+'
+regexp = '^(GET) /admin/user/.+'
 name = 'GET /admin/user/*'
 
 [[bundle]]
-regexp = '^POST /admin/user/.+/ban'
+regexp = '^(POST) /admin/user/.+/ban'
 name = 'POST /admin/user/*/ban'
 
 ################################################################################
