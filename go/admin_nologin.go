@@ -59,7 +59,7 @@ func (h *Handler) adminLogin(c echo.Context) error {
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
-	sessID, err := generateUUID()
+	sessID, err := generateULID()
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}

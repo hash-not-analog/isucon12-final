@@ -140,7 +140,7 @@ func (h *Handler) createUser(c echo.Context) error {
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
-	sessID, err := generateUUID()
+	sessID, err := generateULID()
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
@@ -232,14 +232,14 @@ func (h *Handler) login(c echo.Context) error {
 
 	// sessionを更新
 	query = "DELETE FROM user_sessions WHERE user_id=?"
-	if _, err = tx.Exec(query, requestAt, req.UserID); err != nil {
+	if _, err = tx.Exec(query, req.UserID); err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 	sID, err := h.generateID()
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
-	sessID, err := generateUUID()
+	sessID, err := generateULID()
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}

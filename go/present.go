@@ -201,7 +201,7 @@ func (h *Handler) listItem(c echo.Context) error {
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
-	tk, err := generateUUID()
+	tk, err := generateULID()
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
