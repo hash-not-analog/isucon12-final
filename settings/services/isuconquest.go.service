@@ -14,6 +14,8 @@ ExecStop=/bin/kill -s QUIT $MAINPID
 
 Restart   = always
 Type      = simple
+DefaultStartLimitInterval=20s
+DefaultStartLimitBurst=200
 
 [Install]
 WantedBy=multi-user.target
