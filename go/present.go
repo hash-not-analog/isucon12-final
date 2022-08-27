@@ -204,6 +204,10 @@ func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
 		userCoins = append(userCoins, user)
 	}
 
+	if len(userCoins) <= 0 {
+		return nil
+	}
+
 	// query := "UPDATE users SET isu_coin=? WHERE id=?"
 	query := "INSERT INTO users(id, last_activated_at, registered_at, last_getreward_at, created_at, updated_at)" +
 		" VALUES(:id, :last_activated_at, :registered_at, :last_getreward_at, :created_at, :updated_at)" +
