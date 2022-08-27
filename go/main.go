@@ -74,7 +74,19 @@ func main() {
 	e.JSONSerializer = helpisu.NewSonicSerializer()
 
 	// connect db
-	dbx, err := connectDB(true, 1)
+	dbx, err := connectDB(false, 1)
+	if err != nil {
+		e.Logger.Fatalf("failed to connect to db: %v", err)
+	}
+	defer dbx.Close()
+
+	dbx2, err := connectDB(false, 2)
+	if err != nil {
+		e.Logger.Fatalf("failed to connect to db: %v", err)
+	}
+	defer dbx.Close()
+
+	dbx3, err := connectDB(false, 3)
 	if err != nil {
 		e.Logger.Fatalf("failed to connect to db: %v", err)
 	}
@@ -86,7 +98,9 @@ func main() {
 	// setting server
 	e.Server.Addr = fmt.Sprintf(":%v", "8080")
 	h := &Handler{
-		DB: dbx,
+		DB:  dbx,
+		DB2: dbx2,
+		DB3: dbx3,
 	}
 
 	// e.Use(middleware.CORS())
@@ -320,31 +334,77 @@ func getRequestTime(c echo.Context) (int64, error) {
 func initialize(c echo.Context) error {
 	helpisu.ResetAllCache()
 
-	for i := 1; i <= 1; i++ {
-		go func(i int) {
-			dbx, err := connectDB(true, i)
-			if err != nil {
-				return
-			}
-			defer dbx.Close()
+	go func() {
+		dbx, err := connectDB(true, 1)
+		if err != nil {
+			return
+		}
+		defer dbx.Close()
 
-			out, err := exec.Command("/bin/sh", "-c", SQLDirectory+"init.sh").CombinedOutput()
-			if err != nil {
-				c.Logger().Errorf("Failed to initialize %s: %v", string(out), err)
-				return
-			}
+		out, err := exec.Command("/bin/sh", "-c", SQLDirectory+"init.sh").CombinedOutput()
+		if err != nil {
+			c.Logger().Errorf("Failed to initialize %s: %v", string(out), err)
+			return
+		}
 
-			var banUsers []*UserBan
-			query := "SELECT * FROM user_bans"
-			if err := dbx.Select(&banUsers, query); err != nil {
-				c.Logger().Errorf("Failed to initialize: %v", err)
-				return
-			}
-			for _, banUser := range banUsers {
-				userBanCache.Set(banUser.UserID, *banUser)
-			}
-		}(i)
-	}
+		var banUsers []*UserBan
+		query := "SELECT * FROM user_bans"
+		if err := dbx.Select(&banUsers, query); err != nil {
+			c.Logger().Errorf("Failed to initialize: %v", err)
+			return
+		}
+		for _, banUser := range banUsers {
+			userBanCache.Set(banUser.UserID, *banUser)
+		}
+	}()
+
+	go func() {
+		dbx, err := connectDB(true, 2)
+		if err != nil {
+			return
+		}
+		defer dbx.Close()
+
+		out, err := exec.Command("/bin/sh", "-c", SQLDirectory+"init.sh").CombinedOutput()
+		if err != nil {
+			c.Logger().Errorf("Failed to initialize %s: %v", string(out), err)
+			return
+		}
+
+		var banUsers []*UserBan
+		query := "SELECT * FROM user_bans"
+		if err := dbx.Select(&banUsers, query); err != nil {
+			c.Logger().Errorf("Failed to initialize: %v", err)
+			return
+		}
+		for _, banUser := range banUsers {
+			userBanCache.Set(banUser.UserID, *banUser)
+		}
+	}()
+
+	go func() {
+		dbx, err := connectDB(true, 3)
+		if err != nil {
+			return
+		}
+		defer dbx.Close()
+
+		out, err := exec.Command("/bin/sh", "-c", SQLDirectory+"init.sh").CombinedOutput()
+		if err != nil {
+			c.Logger().Errorf("Failed to initialize %s: %v", string(out), err)
+			return
+		}
+
+		var banUsers []*UserBan
+		query := "SELECT * FROM user_bans"
+		if err := dbx.Select(&banUsers, query); err != nil {
+			c.Logger().Errorf("Failed to initialize: %v", err)
+			return
+		}
+		for _, banUser := range banUsers {
+			userBanCache.Set(banUser.UserID, *banUser)
+		}
+	}()
 
 	d.Pause()
 
