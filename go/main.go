@@ -513,6 +513,7 @@ func (h *Handler) generateID() (int64, error) {
 			break
 		}
 	}
+	duplicatedIDMap.Set(id, struct{}{})
 
 	return int64(id + 100000000001), nil
 }
