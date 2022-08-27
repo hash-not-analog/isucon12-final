@@ -508,19 +508,24 @@ func (h *Handler) obtainPresent(tx *sqlx.Tx, userID int64, requestAt int64) ([]*
 	}
 
 	eg := errgroup.Group{}
-	eg.Go(func() error {
-		query = "INSERT INTO user_presents(id, user_id, sent_at, item_type, item_id, amount, present_message, created_at, updated_at)" +
-			" VALUES (:id, :user_id, :sent_at, :item_type, :item_id, :amount, :present_message, :created_at, :updated_at)"
-		_, err := tx.NamedExec(query, ups)
-		return err
-	})
 
-	eg.Go(func() error {
-		query = "INSERT INTO user_present_all_received_history(id, user_id, present_all_id, received_at, created_at, updated_at)" +
-			" VALUES (:id, :user_id, :present_all_id, :received_at, :created_at, :updated_at)"
-		_, err := tx.NamedExec(query, histories)
-		return err
-	})
+	if len(ups) > 0 {
+		eg.Go(func() error {
+			query = "INSERT INTO user_presents(id, user_id, sent_at, item_type, item_id, amount, present_message, created_at, updated_at)" +
+				" VALUES (:id, :user_id, :sent_at, :item_type, :item_id, :amount, :present_message, :created_at, :updated_at)"
+			_, err := tx.NamedExec(query, ups)
+			return err
+		})
+	}
+
+	if len(histories) > 0 {
+		eg.Go(func() error {
+			query = "INSERT INTO user_present_all_received_history(id, user_id, present_all_id, received_at, created_at, updated_at)" +
+				" VALUES (:id, :user_id, :present_all_id, :received_at, :created_at, :updated_at)"
+			_, err := tx.NamedExec(query, histories)
+			return err
+		})
+	}
 
 	err := eg.Wait()
 	if err != nil {
