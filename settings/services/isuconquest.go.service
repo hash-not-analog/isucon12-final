@@ -2,6 +2,7 @@
 Description=isuconquest.go
 
 [Service]
+LimitNOFILE=1006500
 WorkingDirectory=/home/isucon/webapp/go
 EnvironmentFile=/home/isucon/env
 PIDFile=/home/isucon/webapp/go/server.pid

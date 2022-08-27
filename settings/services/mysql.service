@@ -8,6 +8,7 @@ After=network.target
 WantedBy=multi-user.target
 
 [Service]
+LimitNOFILE=1006500
 Type=notify
 User=mysql
 Group=mysql
