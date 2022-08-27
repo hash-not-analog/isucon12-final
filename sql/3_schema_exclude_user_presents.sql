@@ -69,7 +69,8 @@ CREATE TABLE `user_bans` (
   `created_at` bigint NOT NULL,
   `updated_at` bigint NOT NULL,
   `deleted_at` bigint default NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE uniq_user_id (`user_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_bin;
 
 CREATE TABLE `user_devices` (
