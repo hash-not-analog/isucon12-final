@@ -481,14 +481,14 @@ func (h *Handler) generateID() (int64, error) {
 	var id int64
 
 	for {
-		id := rand.Intn(9223372036854775807)
+		id := rand.Intn(8223372036854775807)
 		_, ok := duplicatedIDMap.Get(id)
 		if !ok {
 			break
 		}
 	}
 
-	return id, nil
+	return id + 100000000001, nil
 }
 
 // generateSessionID
