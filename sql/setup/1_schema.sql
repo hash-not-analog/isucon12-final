@@ -44,8 +44,7 @@ CREATE TABLE `user_decks` (
   `updated_at`bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`id`),
-  UNIQUE uniq_user_id ( `user_id`,  `deleted_at`),
-  INDEX userid_idx (`user_id`)
+  UNIQUE uniq_user_id ( `user_id`,  `deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `user_bans` (
@@ -68,8 +67,7 @@ CREATE TABLE `user_devices` (
   `deleted_at` bigint default NULL,
   PRIMARY KEY(`id`),
   UNIQUE uniq_user_id ( `user_id`, `platform_type`, `deleted_at`),
-  UNIQUE uniq_platform_id (`platform_id`, `platform_type`, `deleted_at`),
-  INDEX userid_platform_idx (`user_id`, `platform_id`)
+  UNIQUE uniq_platform_id (`platform_id`, `platform_type`, `deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 
@@ -93,8 +91,7 @@ CREATE TABLE `login_bonus_reward_masters` (
   `item_id` int NOT NULL comment '付与するアイテムID',
   `amount` bigint NOT NULL comment '個数',
   `created_at` bigint NOT NULL,
-  PRIMARY KEY (`id`),
-  INDEX bonus_idx (`login_bonus_id`, `reward_sequence`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `user_login_bonuses` (
@@ -107,8 +104,7 @@ CREATE TABLE `user_login_bonuses` (
   `updated_at`bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`id`),
-  UNIQUE uniq_user_id (`user_id`, `login_bonus_id`, `deleted_at`),
-  INDEX userid_idx (`user_id`)
+  UNIQUE uniq_user_id (`user_id`, `login_bonus_id`, `deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 /*  全員プレゼントマスタ */
@@ -122,8 +118,7 @@ CREATE TABLE `present_all_masters` (
   `amount` int NOT NULL comment 'アイテム数',
   `present_message` varchar(255) comment 'プレゼント(お詫び)メッセージ',
   `created_at` bigint NOT NULL,
-  PRIMARY KEY (`id`),
-  INDEX registeredat_idx (`registered_start_at`, `registered_end_at`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 /* 全員プレゼント履歴テーブル */
@@ -136,8 +131,7 @@ CREATE TABLE `user_present_all_received_history` (
   `created_at` bigint NOT NULL,
   `updated_at`bigint NOT NULL,
   `deleted_at` bigint default NULL,
-  PRIMARY KEY (`id`),
-  INDEX userid_idx (`user_id`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `user_presents` (
@@ -152,7 +146,8 @@ CREATE TABLE `user_presents` (
   `updated_at`bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`id`),
-  INDEX userid_deleted_created_id_idx (`user_id`, `deleted_at`, `created_at` DESC, `id`)
+  INDEX userid_idx (`user_id`),
+  INDEX userid_idx (`user_id`, `created_at` DESC, ),
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 /* ガチャマスタ */
@@ -164,8 +159,7 @@ CREATE TABLE `gacha_masters` (
   `end_at` bigint NOT NULL comment '終了日時',
   `display_order` int(2) comment 'ガチャ台の表示順,小さいほど左に表示',
   `created_at` bigint NOT NULL,
-  PRIMARY KEY (`id`),
-  INDEX start_end_display_idx (`start_at`, `end_at`, `display_order` ASC)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `gacha_item_masters` (
@@ -177,8 +171,7 @@ CREATE TABLE `gacha_item_masters` (
   `weight` int NOT NULL comment '確率。万分率で表示',
   `created_at` bigint NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE uniq_item_id (`gacha_id`, `item_type`, `item_id`),
-  INDEX gachaid_id_idx (`gacha_id`, `id` ASC)
+  UNIQUE uniq_item_id (`gacha_id`, `item_type`, `item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `user_items` (
@@ -191,7 +184,7 @@ CREATE TABLE `user_items` (
   `updated_at`bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`id`),
-  INDEX userid_itemtype_idx (`user_id`, `item_type`)
+  INDEX userid_idx (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `user_cards` (
@@ -205,8 +198,7 @@ CREATE TABLE `user_cards` (
   `updated_at`bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`id`),
-  UNIQUE uniq_card_id (`user_id`, `card_id`, `deleted_at`),
-  INDEX userid_idx (`user_id`)
+  UNIQUE uniq_card_id (`user_id`, `card_id`, `deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 /*　アイテムマスタ、カードマスタ */
@@ -223,8 +215,7 @@ CREATE TABLE `item_masters` (
   `gained_exp` int comment 'TYPE3:獲得経験値',
   `shortening_min` bigint comment 'TYPE4:短縮時間(分)',
   -- `created_at` bigint,
-  PRIMARY KEY (`id`),
-  INDEX id_itemtype_idx (`id`, `item_type`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 
@@ -245,8 +236,7 @@ CREATE TABLE `user_sessions` (
   `expired_at` bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`id`),
-  UNIQUE uniq_session_id (`user_id`, `session_id`, `deleted_at`),
-  INDEX sessionid_expire_idx (`session_id`, `expired_at`)
+  UNIQUE uniq_session_id (`user_id`, `session_id`, `deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 /* 更新処理について利用するone time tokenの管理 */
@@ -260,9 +250,7 @@ CREATE TABLE `user_one_time_tokens` (
   `expired_at` bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`id`),
-  UNIQUE uniq_token (`user_id`, `token`, `deleted_at`),
-  INDEX userid_idx (`user_id`),
-  INDEX token_idx (`token`, `token_type`)
+  UNIQUE uniq_token (`user_id`, `token`, `deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 /* 管理者権限のセッション管理 */
@@ -275,9 +263,7 @@ CREATE TABLE `admin_sessions` (
   `expired_at` bigint NOT NULL,
   `deleted_at` bigint default NULL,
   PRIMARY KEY (`id`),
-  UNIQUE uniq_admin_session_id (`user_id`, `session_id`, `deleted_at`),
-  INDEX userid_idx (`user_id`),
-  INDEX sessionid_idx (`session_id`)
+  UNIQUE uniq_admin_session_id (`user_id`, `session_id`, `deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `admin_users` (
