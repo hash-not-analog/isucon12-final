@@ -347,9 +347,7 @@ func initialize(c echo.Context) error {
 			}
 			defer dbx.Close()
 
-			host := getEnv(fmt.Sprintf("ISUCON_DB_HOST_%d", index), "127.0.0.1")
-
-			out, err := exec.Command(fmt.Sprintf("ISUCON_DB_HOST=%s", host), "/bin/sh", "-c", SQLDirectory+"init.sh").CombinedOutput()
+			out, err := exec.Command("/bin/sh", "-c", SQLDirectory+fmt.Sprintf("init%d.sh", index)).CombinedOutput()
 			if err != nil {
 				c.Logger().Errorf("Failed to initialize %s: %v", string(out), err)
 				return
