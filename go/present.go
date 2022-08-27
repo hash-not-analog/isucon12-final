@@ -112,6 +112,9 @@ func (h *Handler) receivePresent(c echo.Context) error {
 	}
 	defer tx.Rollback() //nolint:errcheck
 
+	obtainCoins := []*UserPresent{}
+	obtainCards := []*UserPresent{}
+	obtainGems := []*UserPresent{}
 	// 配布処理
 	for i := range obtainPresent {
 		if obtainPresent[i].DeletedAt != nil {
@@ -120,18 +123,41 @@ func (h *Handler) receivePresent(c echo.Context) error {
 
 		obtainPresent[i].UpdatedAt = requestAt
 		obtainPresent[i].DeletedAt = &requestAt
-		v := obtainPresent[i]
 
-		err = h.obtainItem(tx, v.UserID, v.ItemID, v.ItemType, int64(v.Amount), requestAt)
-		if err != nil {
-			if err == ErrUserNotFound || err == ErrItemNotFound {
-				return errorResponse(c, http.StatusNotFound, err)
-			}
-			if err == ErrInvalidItemType {
-				return errorResponse(c, http.StatusBadRequest, err)
-			}
-			return errorResponse(c, http.StatusInternalServerError, err)
+		switch obtainPresent[i].ItemType {
+		case 1: // coin
+			obtainCoins = append(obtainCoins, obtainPresent[i])
+		case 2: // card(ハンマー)
+			obtainCards = append(obtainCards, obtainPresent[i])
+		case 3, 4: // 強化素材
+			obtainGems = append(obtainGems, obtainPresent[i])
+		default:
+			return errorResponse(c, http.StatusBadRequest, err)
 		}
+	}
+
+	err = h.obtainCoins(tx, obtainCoins)
+	if err != nil {
+		if err == ErrUserNotFound || err == ErrItemNotFound {
+			return errorResponse(c, http.StatusNotFound, err)
+		}
+		return errorResponse(c, http.StatusInternalServerError, err)
+	}
+
+	err = h.obtainCards(tx, obtainCards)
+	if err != nil {
+		if err == ErrUserNotFound || err == ErrItemNotFound {
+			return errorResponse(c, http.StatusNotFound, err)
+		}
+		return errorResponse(c, http.StatusInternalServerError, err)
+	}
+
+	err = h.obtainGems(tx, obtainGems)
+	if err != nil {
+		if err == ErrUserNotFound || err == ErrItemNotFound {
+			return errorResponse(c, http.StatusNotFound, err)
+		}
+		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 
 	query = "INSERT INTO user_presents(id, user_id, sent_at, item_type, item_id, amount, present_message, created_at, deleted_at, updated_at)" +
@@ -161,13 +187,11 @@ type ReceivePresentResponse struct {
 	UpdatedResources *UpdatedResource `json:"updatedResources"`
 }
 
-// obtainItem アイテム付与処理
-func (h *Handler) obtainItem(tx *sqlx.Tx, userID, itemID int64, itemType int, obtainAmount int64, requestAt int64) error {
-	switch itemType {
-	case 1: // coin
+func (h *Handler) obtainCoins(tx *sqlx.Tx, obtainCoins []*UserPresent) error {
+	for i := range obtainCoins {
 		user := new(User)
 		query := "SELECT * FROM users WHERE id=?"
-		if err := tx.Get(user, query, userID); err != nil {
+		if err := tx.Get(user, query, obtainCoins[i].UserID); err != nil {
 			if err == sql.ErrNoRows {
 				return ErrUserNotFound
 			}
@@ -175,15 +199,20 @@ func (h *Handler) obtainItem(tx *sqlx.Tx, userID, itemID int64, itemType int, ob
 		}
 
 		query = "UPDATE users SET isu_coin=? WHERE id=?"
-		totalCoin := user.IsuCoin + obtainAmount
+		totalCoin := user.IsuCoin + int64(obtainCoins[i].Amount)
 		if _, err := tx.Exec(query, totalCoin, user.ID); err != nil {
 			return err
 		}
+	}
 
-	case 2: // card(ハンマー)
+	return nil
+}
+
+func (h *Handler) obtainCards(tx *sqlx.Tx, obtainCards []*UserPresent) error {
+	for i := range obtainCards {
 		query := "SELECT * FROM item_masters WHERE id=? AND item_type=?"
 		item := new(ItemMaster)
-		if err := tx.Get(item, query, itemID, itemType); err != nil {
+		if err := tx.Get(item, query, obtainCards[i].ItemID, obtainCards[i].ItemType); err != nil {
 			if err == sql.ErrNoRows {
 				return ErrItemNotFound
 			}
@@ -196,23 +225,28 @@ func (h *Handler) obtainItem(tx *sqlx.Tx, userID, itemID int64, itemType int, ob
 		}
 		card := &UserCard{
 			ID:           cID,
-			UserID:       userID,
+			UserID:       obtainCards[i].UserID,
 			CardID:       item.ID,
 			AmountPerSec: *item.AmountPerSec,
 			Level:        1,
 			TotalExp:     0,
-			CreatedAt:    requestAt,
-			UpdatedAt:    requestAt,
+			CreatedAt:    obtainCards[i].UpdatedAt,
+			UpdatedAt:    obtainCards[i].UpdatedAt,
 		}
 		query = "INSERT INTO user_cards(id, user_id, card_id, amount_per_sec, level, total_exp, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 		if _, err := tx.Exec(query, card.ID, card.UserID, card.CardID, card.AmountPerSec, card.Level, card.TotalExp, card.CreatedAt, card.UpdatedAt); err != nil {
 			return err
 		}
+	}
 
-	case 3, 4: // 強化素材
+	return nil
+}
+
+func (h *Handler) obtainGems(tx *sqlx.Tx, obtainGems []*UserPresent) error {
+	for i := range obtainGems {
 		query := "SELECT * FROM item_masters WHERE id=? AND item_type=?"
 		item := new(ItemMaster)
-		if err := tx.Get(item, query, itemID, itemType); err != nil {
+		if err := tx.Get(item, query, obtainGems[i].ItemID, obtainGems[i].ItemType); err != nil {
 			if err == sql.ErrNoRows {
 				return ErrItemNotFound
 			}
@@ -220,44 +254,41 @@ func (h *Handler) obtainItem(tx *sqlx.Tx, userID, itemID int64, itemType int, ob
 		}
 		// 所持数取得
 		query = "SELECT * FROM user_items WHERE user_id=? AND item_id=?"
-		uitem := new(UserItem)
-		if err := tx.Get(uitem, query, userID, item.ID); err != nil {
+		uItem := new(UserItem)
+		if err := tx.Get(uItem, query, obtainGems[i].UserID, item.ID); err != nil {
 			if err != sql.ErrNoRows {
 				return err
 			}
-			uitem = nil
+			uItem = nil
 		}
 
-		if uitem == nil { // 新規作成
-			uitemID, err := h.generateID()
+		if uItem == nil { // 新規作成
+			uItemID, err := h.generateID()
 			if err != nil {
 				return err
 			}
-			uitem = &UserItem{
-				ID:        uitemID,
-				UserID:    userID,
+			uItem = &UserItem{
+				ID:        uItemID,
+				UserID:    obtainGems[i].UserID,
 				ItemType:  item.ItemType,
 				ItemID:    item.ID,
-				Amount:    int(obtainAmount),
-				CreatedAt: requestAt,
-				UpdatedAt: requestAt,
+				Amount:    obtainGems[i].Amount,
+				CreatedAt: obtainGems[i].UpdatedAt,
+				UpdatedAt: obtainGems[i].UpdatedAt,
 			}
 			query = "INSERT INTO user_items(id, user_id, item_id, item_type, amount, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-			if _, err := tx.Exec(query, uitem.ID, userID, uitem.ItemID, uitem.ItemType, uitem.Amount, requestAt, requestAt); err != nil {
+			if _, err := tx.Exec(query, uItem.ID, uItem.UserID, uItem.ItemID, uItem.ItemType, uItem.Amount, uItem.CreatedAt, uItem.UpdatedAt); err != nil {
 				return err
 			}
 
 		} else { // 更新
-			uitem.Amount += int(obtainAmount)
-			uitem.UpdatedAt = requestAt
+			uItem.Amount += int(obtainGems[i].Amount)
+			uItem.UpdatedAt = obtainGems[i].UpdatedAt
 			query = "UPDATE user_items SET amount=?, updated_at=? WHERE id=?"
-			if _, err := tx.Exec(query, uitem.Amount, uitem.UpdatedAt, uitem.ID); err != nil {
+			if _, err := tx.Exec(query, uItem.Amount, uItem.UpdatedAt, uItem.ID); err != nil {
 				return err
 			}
 		}
-
-	default:
-		return ErrInvalidItemType
 	}
 
 	return nil
