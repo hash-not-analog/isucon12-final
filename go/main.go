@@ -339,6 +339,8 @@ func initialize(c echo.Context) error {
 	for i := 1; i <= 3; i++ {
 		wg.Add(1)
 		go func(index int) {
+			defer wg.Done()
+
 			dbx, err := connectDB(true, index)
 			if err != nil {
 				return
@@ -347,7 +349,7 @@ func initialize(c echo.Context) error {
 
 			host := getEnv(fmt.Sprintf("ISUCON_DB_HOST_%d", index), "127.0.0.1")
 
-			out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("ISUCON_DB_HOST=%s", host), SQLDirectory+"init.sh").CombinedOutput()
+			out, err := exec.Command(fmt.Sprintf("ISUCON_DB_HOST=%s", host), "/bin/sh", "-c", SQLDirectory+"init.sh").CombinedOutput()
 			if err != nil {
 				c.Logger().Errorf("Failed to initialize %s: %v", string(out), err)
 				return
@@ -362,7 +364,6 @@ func initialize(c echo.Context) error {
 			for _, banUser := range banUsers {
 				userBanCache.Set(banUser.UserID, *banUser)
 			}
-			wg.Done()
 		}(i)
 	}
 
