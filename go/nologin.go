@@ -7,6 +7,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/sync/errgroup"
 )
 
 // createUser ユーザの作成
@@ -139,7 +140,7 @@ func (h *Handler) createUser(c echo.Context) error {
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
-	sessID, err := generateUUID()
+	sessID, err := generateULID()
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
@@ -230,15 +231,15 @@ func (h *Handler) login(c echo.Context) error {
 	defer tx.Rollback() //nolint:errcheck
 
 	// sessionを更新
-	query = "UPDATE user_sessions SET deleted_at=? WHERE user_id=? AND deleted_at IS NULL"
-	if _, err = tx.Exec(query, requestAt, req.UserID); err != nil {
+	query = "DELETE FROM user_sessions WHERE user_id=?"
+	if _, err = tx.Exec(query, req.UserID); err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 	sID, err := h.generateID()
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
-	sessID, err := generateUUID()
+	sessID, err := generateULID()
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
@@ -463,18 +464,29 @@ func (h *Handler) obtainPresent(tx *sqlx.Tx, userID int64, requestAt int64) ([]*
 		return nil, err
 	}
 
+	receivedPresentsID := make([]int64, 0)
+	query = "SELECT present_all_masters.id FROM present_all_masters" +
+		" JOIN user_present_all_received_history ON user_present_all_received_history.present_all_id = present_all_masters.id" +
+		" WHERE user_present_all_received_history.user_id=?"
+	if err := tx.Select(&receivedPresentsID, query, userID); err != nil {
+		return nil, err
+	}
+
+	ups := make([]*UserPresent, 0, len(normalPresents))
+	histories := make([]*UserPresentAllReceivedHistory, 0, len(normalPresents))
+
 	// 全員プレゼント取得情報更新
 	obtainPresents := make([]*UserPresent, 0)
 	for _, np := range normalPresents {
-		received := new(UserPresentAllReceivedHistory)
-		query = "SELECT * FROM user_present_all_received_history WHERE user_id=? AND present_all_id=?"
-		err := tx.Get(received, query, userID, np.ID)
-		if err == nil {
-			// プレゼント配布済
-			continue
+		skip := false
+		for i := range receivedPresentsID {
+			if receivedPresentsID[i] == np.ID {
+				skip = true
+				break
+			}
 		}
-		if err != sql.ErrNoRows {
-			return nil, err
+		if skip {
+			continue
 		}
 
 		// user present boxに入れる
@@ -493,10 +505,7 @@ func (h *Handler) obtainPresent(tx *sqlx.Tx, userID int64, requestAt int64) ([]*
 			CreatedAt:      requestAt,
 			UpdatedAt:      requestAt,
 		}
-		query = "INSERT INTO user_presents(id, user_id, sent_at, item_type, item_id, amount, present_message, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-		if _, err := tx.Exec(query, up.ID, up.UserID, up.SentAt, up.ItemType, up.ItemID, up.Amount, up.PresentMessage, up.CreatedAt, up.UpdatedAt); err != nil {
-			return nil, err
-		}
+		ups = append(ups, up)
 
 		// historyに入れる
 		phID, err := h.generateID()
@@ -511,20 +520,34 @@ func (h *Handler) obtainPresent(tx *sqlx.Tx, userID int64, requestAt int64) ([]*
 			CreatedAt:    requestAt,
 			UpdatedAt:    requestAt,
 		}
-		query = "INSERT INTO user_present_all_received_history(id, user_id, present_all_id, received_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
-		if _, err := tx.Exec(
-			query,
-			history.ID,
-			history.UserID,
-			history.PresentAllID,
-			history.ReceivedAt,
-			history.CreatedAt,
-			history.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
+		histories = append(histories, history)
 
 		obtainPresents = append(obtainPresents, up)
+	}
+
+	eg := errgroup.Group{}
+
+	if len(ups) > 0 {
+		eg.Go(func() error {
+			query = "INSERT INTO user_presents(id, user_id, sent_at, item_type, item_id, amount, present_message, created_at, updated_at)" +
+				" VALUES (:id, :user_id, :sent_at, :item_type, :item_id, :amount, :present_message, :created_at, :updated_at)"
+			_, err := tx.NamedExec(query, ups)
+			return err
+		})
+	}
+
+	if len(histories) > 0 {
+		eg.Go(func() error {
+			query = "INSERT INTO user_present_all_received_history(id, user_id, present_all_id, received_at, created_at, updated_at)" +
+				" VALUES (:id, :user_id, :present_all_id, :received_at, :created_at, :updated_at)"
+			_, err := tx.NamedExec(query, histories)
+			return err
+		})
+	}
+
+	err := eg.Wait()
+	if err != nil {
+		return nil, err
 	}
 
 	return obtainPresents, nil

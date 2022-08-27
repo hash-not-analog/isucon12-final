@@ -13,8 +13,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-sql-driver/mysql"
-	"github.com/google/uuid"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -85,6 +84,7 @@ func main() {
 	// utility
 	e.POST("/initialize", initialize)
 	e.GET("/health", h.health)
+	e.GET("/admin/generate", h.GenerateID)
 
 	// feature
 	API := e.Group("", h.apiMiddleware)
@@ -209,8 +209,8 @@ func (h *Handler) checkSessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 		}
 
 		userSession := new(Session)
-		query := "SELECT * FROM user_sessions WHERE session_id=? AND deleted_at IS NULL"
-		if err := h.DB.Get(userSession, query, sessID); err != nil {
+		query := "SELECT * FROM user_sessions WHERE session_id=? AND expired_at > ?"
+		if err := h.DB.Get(userSession, query, sessID, requestAt); err != nil {
 			if err == sql.ErrNoRows {
 				return errorResponse(c, http.StatusUnauthorized, ErrUnauthorized)
 			}
@@ -221,13 +221,13 @@ func (h *Handler) checkSessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 			return errorResponse(c, http.StatusForbidden, ErrForbidden)
 		}
 
-		if userSession.ExpiredAt < requestAt {
-			query = "UPDATE user_sessions SET deleted_at=? WHERE session_id=?"
-			if _, err = h.DB.Exec(query, requestAt, sessID); err != nil {
-				return errorResponse(c, http.StatusInternalServerError, err)
-			}
-			return errorResponse(c, http.StatusUnauthorized, ErrExpiredSession)
-		}
+		// if userSession.ExpiredAt < requestAt {
+		// 	query = "DELETE FROM user_sessions WHERE session_id=?"
+		// 	if _, err = h.DB.Exec(query, sessID); err != nil {
+		// 		return errorResponse(c, http.StatusInternalServerError, err)
+		// 	}
+		// 	return errorResponse(c, http.StatusUnauthorized, ErrExpiredSession)
+		// }
 
 		// next
 		if err := next(c); err != nil {
@@ -364,37 +364,54 @@ func noContentResponse(c echo.Context, status int) error {
 	return c.NoContent(status)
 }
 
+func (h *Handler) GenerateID(c echo.Context) error {
+	id, _ := h.generateID()
+	return c.Blob(http.StatusOK, "text/plain", []byte(strconv.Itoa(int(id))))
+}
+
+var duplicatedIDMap = helpisu.NewCache[int, struct{}]()
+
 // generateID uniqueなIDを生成する
 func (h *Handler) generateID() (int64, error) {
-	var updateErr error
-	for i := 0; i < 100; i++ {
-		res, err := h.DB.Exec("UPDATE id_generator SET id=LAST_INSERT_ID(id+1)")
+	if root := os.Getenv("id_root"); root != "" {
+		resp, err := http.Get(fmt.Sprintf("http://%s:8080/admin/generate", root))
 		if err != nil {
-			if merr, ok := err.(*mysql.MySQLError); ok && merr.Number == 1213 {
-				updateErr = err
-				continue
-			}
+			return 0, err
+		}
+		defer resp.Body.Close()
+
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
 			return 0, err
 		}
 
-		id, err := res.LastInsertId()
+		id, err := strconv.Atoi(string(b))
 		if err != nil {
-			return 0, err
+			return 0, nil
 		}
-		return id, nil
+
+		return int64(id), nil
 	}
 
-	return 0, fmt.Errorf("failed to generate id: %w", updateErr)
+	var id int
+
+	for {
+		id = rand.Intn(8223372036854775807)
+		_, ok := duplicatedIDMap.Get(id)
+		if !ok {
+			break
+		}
+	}
+	duplicatedIDMap.Set(id, struct{}{})
+
+	return int64(id + 100000000001), nil
 }
 
 // generateSessionID
-func generateUUID() (string, error) {
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return "", err
-	}
+func generateULID() (string, error) {
+	id := helpisu.NewULID()
 
-	return id.String(), nil
+	return id, nil
 }
 
 // getUserID gets userID by path param.
