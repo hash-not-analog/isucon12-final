@@ -209,8 +209,8 @@ func (h *Handler) checkSessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 		}
 
 		userSession := new(Session)
-		query := "SELECT * FROM user_sessions WHERE session_id=?"
-		if err := h.DB.Get(userSession, query, sessID); err != nil {
+		query := "SELECT * FROM user_sessions WHERE session_id=? AND expired_at < ?"
+		if err := h.DB.Get(userSession, query, sessID, requestAt); err != nil {
 			if err == sql.ErrNoRows {
 				return errorResponse(c, http.StatusUnauthorized, ErrUnauthorized)
 			}
@@ -221,13 +221,13 @@ func (h *Handler) checkSessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 			return errorResponse(c, http.StatusForbidden, ErrForbidden)
 		}
 
-		if userSession.ExpiredAt < requestAt {
-			query = "DELETE FROM user_sessions WHERE session_id=?"
-			if _, err = h.DB.Exec(query, sessID); err != nil {
-				return errorResponse(c, http.StatusInternalServerError, err)
-			}
-			return errorResponse(c, http.StatusUnauthorized, ErrExpiredSession)
-		}
+		// if userSession.ExpiredAt < requestAt {
+		// 	query = "DELETE FROM user_sessions WHERE session_id=?"
+		// 	if _, err = h.DB.Exec(query, sessID); err != nil {
+		// 		return errorResponse(c, http.StatusInternalServerError, err)
+		// 	}
+		// 	return errorResponse(c, http.StatusUnauthorized, ErrExpiredSession)
+		// }
 
 		// next
 		if err := next(c); err != nil {
