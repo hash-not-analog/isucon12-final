@@ -424,14 +424,14 @@ func initialize(c echo.Context) error {
 
 	helpisu.ResetAllCache()
 
-	var banUsers []UserBan
+	var banUsers []*UserBan
 	query := "SELECT * FROM user_bans"
 	if err := dbx.Select(banUsers, query); err != nil {
 		c.Logger().Errorf("Failed to initialize: %v", err)
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 	for _, banUser := range banUsers {
-		userBanCache.Set(banUser.UserID, banUser)
+		userBanCache.Set(banUser.UserID, *banUser)
 	}
 
 	return successResponse(c, &InitializeResponse{
