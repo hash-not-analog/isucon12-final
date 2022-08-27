@@ -426,7 +426,7 @@ func initialize(c echo.Context) error {
 
 	var banUsers []*UserBan
 	query := "SELECT * FROM user_bans"
-	if err := dbx.Select(banUsers, query); err != nil {
+	if err := dbx.Select(&banUsers, query); err != nil {
 		c.Logger().Errorf("Failed to initialize: %v", err)
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
