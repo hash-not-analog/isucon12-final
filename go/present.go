@@ -345,7 +345,7 @@ func (h *Handler) obtainGems(tx *sqlx.Tx, obtainGems []*UserPresent) error {
 	query = "INSERT INTO user_items(id, user_id, item_id, item_type, amount, created_at, updated_at)" +
 		" VALUES (:id, :user_id, :item_id, :item_type, :amount, :created_at, :updated_at)" +
 		" ON DUPLICATE KEY UPDATE amount = VALUES(amount), updated_at=VALUES(updated_at)"
-	if _, err := tx.Exec(query, uItems); err != nil {
+	if _, err := tx.NamedExec(query, uItems); err != nil {
 		return err
 	}
 
