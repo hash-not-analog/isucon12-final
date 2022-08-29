@@ -225,6 +225,9 @@ func (h *Handler) adminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 // apiMiddleware
 func (h *Handler) apiMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		userID, err := getUserID(c)
+		h.setDB(c, userID)
+
 		requestAt, err := time.Parse(time.RFC1123, c.Request().Header.Get("x-isu-date"))
 		if err != nil {
 			requestAt = time.Now()
@@ -234,7 +237,7 @@ func (h *Handler) apiMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		// マスタ確認
 		query := "SELECT * FROM version_masters WHERE status=1"
 		masterVersion := new(VersionMaster)
-		if err := h.DB.Get(masterVersion, query); err != nil {
+		if err := c.Get("db").(*sqlx.DB).Get(masterVersion, query); err != nil {
 			if err == sql.ErrNoRows {
 				return errorResponse(c, http.StatusNotFound, fmt.Errorf("active master version is not found"))
 			}
@@ -246,7 +249,6 @@ func (h *Handler) apiMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		// check ban
-		userID, err := getUserID(c)
 		if err == nil && userID != 0 {
 			isBan, err := h.checkBan(c, userID)
 			if err != nil {
