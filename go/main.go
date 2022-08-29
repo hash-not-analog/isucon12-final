@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"io"
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
@@ -472,40 +471,11 @@ func noContentResponse(c echo.Context, status int) error {
 	return c.NoContent(status)
 }
 
-var duplicatedIDMap = helpisu.NewCache[int, struct{}]()
-
 // generateID uniqueなIDを生成する
 func (h *Handler) generateID() (int64, error) {
-	if root := os.Getenv("id_root"); root != "" {
-		resp, err := http.Get(fmt.Sprintf("http://%s:8080/admin/generate", root))
-		if err != nil {
-			return 0, err
-		}
-		defer resp.Body.Close()
-
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return 0, err
-		}
-
-		id, err := strconv.Atoi(string(b))
-		if err != nil {
-			return 0, nil
-		}
-
-		return int64(id), nil
-	}
-
 	var id int
 
-	for {
-		id = rand.Intn(8223372036854775807)
-		_, ok := duplicatedIDMap.Get(id)
-		if !ok {
-			break
-		}
-	}
-	duplicatedIDMap.Set(id, struct{}{})
+	id = rand.Intn(9223370036854775807)
 
 	return int64(id + 100000000001), nil
 }
