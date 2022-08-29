@@ -48,8 +48,10 @@ const (
 
 type Handler struct {
 	DB  *sqlx.DB
+	DB1 *sqlx.DB
 	DB2 *sqlx.DB
 	DB3 *sqlx.DB
+	DB4 *sqlx.DB
 }
 
 var d = helpisu.NewDBDisconnectDetector(5, 80)
