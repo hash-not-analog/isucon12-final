@@ -114,7 +114,7 @@ func (h *Handler) adminUpdateMaster(c echo.Context) error {
 					return errorResponse(c, http.StatusInternalServerError, err)
 				}
 			} else {
-				// c.Logger().Debug("Skip Update Master: versionMaster")
+				c.Logger().Debug("Skip Update Master: versionMaster")
 			}
 
 			// item
@@ -153,7 +153,7 @@ func (h *Handler) adminUpdateMaster(c echo.Context) error {
 					return errorResponse(c, http.StatusInternalServerError, err)
 				}
 			} else {
-				// c.Logger().Debug("Skip Update Master: itemMaster")
+				c.Logger().Debug("Skip Update Master: itemMaster")
 			}
 
 			// gacha
@@ -188,7 +188,7 @@ func (h *Handler) adminUpdateMaster(c echo.Context) error {
 					return errorResponse(c, http.StatusInternalServerError, err)
 				}
 			} else {
-				// c.Logger().Debug("Skip Update Master: gachaMaster")
+				c.Logger().Debug("Skip Update Master: gachaMaster")
 			}
 
 			// gacha item
@@ -224,7 +224,7 @@ func (h *Handler) adminUpdateMaster(c echo.Context) error {
 					return errorResponse(c, http.StatusInternalServerError, err)
 				}
 			} else {
-				// c.Logger().Debug("Skip Update Master: gachaItemMaster")
+				c.Logger().Debug("Skip Update Master: gachaItemMaster")
 			}
 
 			// present all
@@ -261,7 +261,7 @@ func (h *Handler) adminUpdateMaster(c echo.Context) error {
 					return errorResponse(c, http.StatusInternalServerError, err)
 				}
 			} else {
-				// c.Logger().Debug("Skip Update Master: presentAllMaster")
+				c.Logger().Debug("Skip Update Master: presentAllMaster")
 			}
 
 			// login bonuses
@@ -300,7 +300,7 @@ func (h *Handler) adminUpdateMaster(c echo.Context) error {
 					return errorResponse(c, http.StatusInternalServerError, err)
 				}
 			} else {
-				// c.Logger().Debug("Skip Update Master: loginBonusMaster")
+				c.Logger().Debug("Skip Update Master: loginBonusMaster")
 			}
 
 			// login bonus rewards
@@ -336,7 +336,7 @@ func (h *Handler) adminUpdateMaster(c echo.Context) error {
 					return errorResponse(c, http.StatusInternalServerError, err)
 				}
 			} else {
-				// c.Logger().Debug("Skip Update Master: loginBonusRewardMaster")
+				c.Logger().Debug("Skip Update Master: loginBonusRewardMaster")
 			}
 
 			activeMaster = new(VersionMaster)
