@@ -7,7 +7,6 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/labstack/echo/v4 v4.8.0
 	github.com/logica0419/helpisu v0.11.0
-	github.com/pkg/errors v0.9.1
 	golang.org/x/crypto v0.0.0-20220826181053-bd7e27e6170d
 	golang.org/x/sync v0.0.0-20220819030929-7fc1605a5dde
 )
