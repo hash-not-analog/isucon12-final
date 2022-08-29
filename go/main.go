@@ -286,9 +286,9 @@ func (h *Handler) checkSessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 		}
 
 		userSession := new(Session)
+		query := "SELECT * FROM user_sessions WHERE session_id=? AND expired_at > ?"
 		hit := false
 		for _, db := range []*sqlx.DB{h.DB, h.DB2, h.DB3, h.DB4} {
-			query := "SELECT * FROM user_sessions WHERE session_id=? AND expired_at > ?"
 			if err := db.Get(userSession, query, sessID, requestAt); err != nil {
 				if err == sql.ErrNoRows {
 					continue
