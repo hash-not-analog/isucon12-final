@@ -291,8 +291,9 @@ func (h *Handler) checkSessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 		if err := c.Get("db").(*sqlx.DB).Get(userSession, query, sessID, requestAt); err != nil {
 			if err == sql.ErrNoRows {
 				hit = false
+			} else {
+				return errorResponse(c, http.StatusInternalServerError, err)
 			}
-			return errorResponse(c, http.StatusInternalServerError, err)
 		}
 
 		if !hit {
