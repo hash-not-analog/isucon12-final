@@ -8,7 +8,6 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
-	"golang.org/x/sync/errgroup"
 )
 
 // listPresent プレゼント一覧
@@ -137,104 +136,41 @@ func (h *Handler) receivePresent(c echo.Context) error {
 		}
 	}
 
-	eg := errgroup.Group{}
-
-	eg.Go(func() error {
-		tx1, err := c.Get("db").(*sqlx.DB).Beginx()
-		if err != nil {
-			return errorResponse(c, http.StatusInternalServerError, err)
+	err = h.obtainCoins(tx, obtainCoins)
+	if err != nil {
+		if err == ErrUserNotFound || err == ErrItemNotFound {
+			return errorResponse(c, http.StatusNotFound, err)
 		}
-		defer tx1.Rollback() //nolint:errcheck
+		return errorResponse(c, http.StatusInternalServerError, err)
+	}
 
-		err = h.obtainCoins(tx1, obtainCoins)
-		if err != nil {
-			if err == ErrUserNotFound || err == ErrItemNotFound {
-				return errorResponse(c, http.StatusNotFound, err)
-			}
-			return errorResponse(c, http.StatusInternalServerError, err)
+	err = h.obtainCards(tx, obtainCards)
+	if err != nil {
+		if err == ErrUserNotFound || err == ErrItemNotFound {
+			return errorResponse(c, http.StatusNotFound, err)
 		}
+		return errorResponse(c, http.StatusInternalServerError, err)
+	}
 
-		err = tx1.Commit()
-		if err != nil {
-			return errorResponse(c, http.StatusInternalServerError, err)
+	err = h.obtainGems(tx, obtainGems)
+	if err != nil {
+		if err == ErrUserNotFound || err == ErrItemNotFound {
+			return errorResponse(c, http.StatusNotFound, err)
 		}
-		return nil
-	})
+		return errorResponse(c, http.StatusInternalServerError, err)
+	}
 
-	eg.Go(func() error {
-		tx2, err := c.Get("db").(*sqlx.DB).Beginx()
-		if err != nil {
-			return errorResponse(c, http.StatusInternalServerError, err)
-		}
-		defer tx2.Rollback() //nolint:errcheck
-
-		err = h.obtainCards(tx2, obtainCards)
-		if err != nil {
-			if err == ErrUserNotFound || err == ErrItemNotFound {
-				return errorResponse(c, http.StatusNotFound, err)
-			}
-			return errorResponse(c, http.StatusInternalServerError, err)
-		}
-
-		err = tx2.Commit()
-		if err != nil {
-			return errorResponse(c, http.StatusInternalServerError, err)
-		}
-		return nil
-	})
-
-	eg.Go(func() error {
-		tx3, err := c.Get("db").(*sqlx.DB).Beginx()
-		if err != nil {
-			return errorResponse(c, http.StatusInternalServerError, err)
-		}
-		defer tx3.Rollback() //nolint:errcheck
-
-		err = h.obtainGems(tx3, obtainGems)
-		if err != nil {
-			if err == ErrUserNotFound || err == ErrItemNotFound {
-				return errorResponse(c, http.StatusNotFound, err)
-			}
-			return errorResponse(c, http.StatusInternalServerError, err)
-		}
-
-		err = tx3.Commit()
-		if err != nil {
-			return errorResponse(c, http.StatusInternalServerError, err)
-		}
-		return nil
-	})
-
-	eg.Go(func() error {
-		tx4, err := c.Get("db").(*sqlx.DB).Beginx()
-		if err != nil {
-			return errorResponse(c, http.StatusInternalServerError, err)
-		}
-		defer tx4.Rollback() //nolint:errcheck
-
-		query = "INSERT INTO user_presents(id, user_id, sent_at, item_type, item_id, amount, present_message, created_at, deleted_at, updated_at)" +
-			" VALUES (:id, :user_id, :sent_at, :item_type, :item_id, :amount, :present_message, :created_at, :deleted_at, :updated_at)" +
-			" ON DUPLICATE KEY UPDATE deleted_at=VALUES(deleted_at), updated_at=VALUES(updated_at)"
-		_, err = tx4.NamedExec(query, obtainPresent)
-		if err != nil {
-			return errorResponse(c, http.StatusInternalServerError, err)
-		}
-
-		err = tx4.Commit()
-		if err != nil {
-			return errorResponse(c, http.StatusInternalServerError, err)
-		}
-		return nil
-	})
-
-	err = tx.Commit()
+	query = "INSERT INTO user_presents(id, user_id, sent_at, item_type, item_id, amount, present_message, created_at, deleted_at, updated_at)" +
+		" VALUES (:id, :user_id, :sent_at, :item_type, :item_id, :amount, :present_message, :created_at, :deleted_at, :updated_at)" +
+		" ON DUPLICATE KEY UPDATE deleted_at=VALUES(deleted_at), updated_at=VALUES(updated_at)"
+	_, err = tx.NamedExec(query, obtainPresent)
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 
-	err = eg.Wait()
+	err = tx.Commit()
 	if err != nil {
-		return nil
+		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 
 	return successResponse(c, &ReceivePresentResponse{
