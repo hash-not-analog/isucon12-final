@@ -124,7 +124,6 @@ func main() {
 	// utility
 	e.POST("/initialize", initialize)
 	e.GET("/health", h.health)
-	e.GET("/admin/generate", h.GenerateID)
 
 	// feature
 	API := e.Group("", h.apiMiddleware)
@@ -471,11 +470,6 @@ func successResponse(c echo.Context, v interface{}) error {
 // noContentResponse
 func noContentResponse(c echo.Context, status int) error {
 	return c.NoContent(status)
-}
-
-func (h *Handler) GenerateID(c echo.Context) error {
-	id, _ := h.generateID()
-	return c.Blob(http.StatusOK, "text/plain", []byte(strconv.Itoa(int(id))))
 }
 
 var duplicatedIDMap = helpisu.NewCache[int, struct{}]()
