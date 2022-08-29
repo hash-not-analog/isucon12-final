@@ -170,14 +170,14 @@ func (h *Handler) selectDBMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func (h *Handler) setDB(c echo.Context, userID int64) {
-	switch userID % 4 {
-	case 0:
+	switch userID % 7 {
+	case 0, 1:
 		c.Set("db", h.DB)
-	case 1:
+	case 2, 3:
 		c.Set("db", h.DB2)
-	case 2:
+	case 4, 5:
 		c.Set("db", h.DB3)
-	case 3:
+	case 6:
 		c.Set("db", h.DB4)
 	}
 }
