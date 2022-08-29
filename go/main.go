@@ -285,18 +285,27 @@ func (h *Handler) checkSessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 			return errorResponse(c, http.StatusInternalServerError, ErrGetRequestTime)
 		}
 
+		hit := true
 		userSession := new(Session)
 		query := "SELECT * FROM user_sessions WHERE session_id=? AND expired_at > ?"
-		hit := false
-		for _, db := range []*sqlx.DB{h.DB, h.DB2, h.DB3, h.DB4} {
-			if err := db.Get(userSession, query, sessID, requestAt); err != nil {
-				if err == sql.ErrNoRows {
-					continue
-				}
-				return errorResponse(c, http.StatusInternalServerError, err)
+		if err := c.Get("db").(*sqlx.DB).Get(userSession, query, sessID, requestAt); err != nil {
+			if err == sql.ErrNoRows {
+				hit = false
 			}
-			hit = true
-			break
+			return errorResponse(c, http.StatusInternalServerError, err)
+		}
+
+		if !hit {
+			for _, db := range []*sqlx.DB{h.DB, h.DB2, h.DB3, h.DB4} {
+				if err := db.Get(userSession, query, sessID, requestAt); err != nil {
+					if err == sql.ErrNoRows {
+						continue
+					}
+					return errorResponse(c, http.StatusInternalServerError, err)
+				}
+				hit = true
+				break
+			}
 		}
 		if !hit {
 			return errorResponse(c, http.StatusUnauthorized, ErrUnauthorized)
