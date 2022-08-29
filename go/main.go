@@ -74,19 +74,19 @@ func main() {
 	e.JSONSerializer = helpisu.NewSonicSerializer()
 
 	// connect db
-	dbx, err := connectDB(false, 1)
+	dbx1, err := connectDB(false, 1)
 	if err != nil {
 		e.Logger.Fatalf("failed to connect to db: %v", err)
 	}
-	defer dbx.Close()
+	defer dbx1.Close()
 
-	helpisu.WaitDBStartUp(dbx.DB)
+	helpisu.WaitDBStartUp(dbx1.DB)
 
 	dbx2, err := connectDB(false, 2)
 	if err != nil {
 		e.Logger.Fatalf("failed to connect to db: %v", err)
 	}
-	defer dbx.Close()
+	defer dbx2.Close()
 
 	helpisu.WaitDBStartUp(dbx2.DB)
 
@@ -94,19 +94,32 @@ func main() {
 	if err != nil {
 		e.Logger.Fatalf("failed to connect to db: %v", err)
 	}
-	defer dbx.Close()
+	defer dbx3.Close()
 
 	helpisu.WaitDBStartUp(dbx3.DB)
 
-	d.RegisterDB(dbx.DB)
+	dbx4, err := connectDB(false, 4)
+	if err != nil {
+		e.Logger.Fatalf("failed to connect to db: %v", err)
+	}
+	defer dbx4.Close()
+
+	helpisu.WaitDBStartUp(dbx3.DB)
+
+	d.RegisterDB(dbx1.DB)
+	d.RegisterDB(dbx2.DB)
+	d.RegisterDB(dbx3.DB)
+	d.RegisterDB(dbx4.DB)
 	go d.Start()
 
 	// setting server
 	e.Server.Addr = fmt.Sprintf(":%v", "8080")
 	h := &Handler{
-		DB:  dbx,
+		DB:  dbx1,
+		DB1: dbx1,
 		DB2: dbx2,
 		DB3: dbx3,
+		DB4: dbx4,
 	}
 
 	// e.Use(middleware.CORS())
@@ -345,7 +358,7 @@ func initialize(c echo.Context) error {
 	helpisu.ResetAllCache()
 
 	wg := sync.WaitGroup{}
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= 4; i++ {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
