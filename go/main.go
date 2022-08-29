@@ -132,7 +132,7 @@ func main() {
 	API := e.Group("", h.apiMiddleware)
 	API.POST("/user", h.createUser)
 	API.POST("/login", h.login)
-	sessCheckAPI := API.Group("", h.checkSessionMiddleware, h.selectDBMiddleware)
+	sessCheckAPI := API.Group("", h.selectDBMiddleware, h.checkSessionMiddleware)
 	sessCheckAPI.GET("/user/:userID/gacha/index", h.listGacha)
 	sessCheckAPI.POST("/user/:userID/gacha/draw/:gachaID/:n", h.drawGacha)
 	sessCheckAPI.GET("/user/:userID/present/index/:n", h.listPresent)
@@ -234,7 +234,7 @@ func (h *Handler) apiMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		// マスタ確認
 		query := "SELECT * FROM version_masters WHERE status=1"
 		masterVersion := new(VersionMaster)
-		if err := c.Get("db").(*sqlx.DB).Get(masterVersion, query); err != nil {
+		if err := h.DB.Get(masterVersion, query); err != nil {
 			if err == sql.ErrNoRows {
 				return errorResponse(c, http.StatusNotFound, fmt.Errorf("active master version is not found"))
 			}
