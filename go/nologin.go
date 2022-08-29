@@ -29,17 +29,20 @@ func (h *Handler) createUser(c echo.Context) error {
 		return errorResponse(c, http.StatusInternalServerError, ErrGetRequestTime)
 	}
 
-	tx, err := h.DB.Beginx()
+	uID, err := h.generateID()
+	if err != nil {
+		return errorResponse(c, http.StatusInternalServerError, err)
+	}
+
+	h.setDB(c, uID)
+
+	tx, err := c.Get("db").(*sqlx.DB).Beginx()
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 	defer tx.Rollback() //nolint:errcheck
 
 	// ユーザ作成
-	uID, err := h.generateID()
-	if err != nil {
-		return errorResponse(c, http.StatusInternalServerError, err)
-	}
 	user := &User{
 		ID:              uID,
 		IsuCoin:         0,
@@ -193,6 +196,8 @@ func (h *Handler) login(c echo.Context) error {
 		return errorResponse(c, http.StatusBadRequest, err)
 	}
 
+	h.setDB(c, req.UserID)
+
 	requestAt, err := getRequestTime(c)
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, ErrGetRequestTime)
@@ -200,7 +205,7 @@ func (h *Handler) login(c echo.Context) error {
 
 	user := new(User)
 	query := "SELECT * FROM users WHERE id=?"
-	if err := h.DB.Get(user, query, req.UserID); err != nil {
+	if err := c.Get("db").(*sqlx.DB).Get(user, query, req.UserID); err != nil {
 		if err == sql.ErrNoRows {
 			return errorResponse(c, http.StatusNotFound, ErrUserNotFound)
 		}
@@ -208,7 +213,7 @@ func (h *Handler) login(c echo.Context) error {
 	}
 
 	// check ban
-	isBan, err := h.checkBan(user.ID)
+	isBan, err := h.checkBan(c, user.ID)
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
@@ -217,14 +222,14 @@ func (h *Handler) login(c echo.Context) error {
 	}
 
 	// viewer id check
-	if err = h.checkViewerID(user.ID, req.ViewerID); err != nil {
+	if err = h.checkViewerID(c, user.ID, req.ViewerID); err != nil {
 		if err == ErrUserDeviceNotFound {
 			return errorResponse(c, http.StatusNotFound, err)
 		}
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}
 
-	tx, err := h.DB.Beginx()
+	tx, err := c.Get("db").(*sqlx.DB).Beginx()
 	if err != nil {
 		return errorResponse(c, http.StatusInternalServerError, err)
 	}

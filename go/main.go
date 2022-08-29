@@ -48,7 +48,6 @@ const (
 
 type Handler struct {
 	DB  *sqlx.DB
-	DB1 *sqlx.DB
 	DB2 *sqlx.DB
 	DB3 *sqlx.DB
 	DB4 *sqlx.DB
@@ -116,7 +115,6 @@ func main() {
 	e.Server.Addr = fmt.Sprintf(":%v", "8080")
 	h := &Handler{
 		DB:  dbx1,
-		DB1: dbx1,
 		DB2: dbx2,
 		DB3: dbx3,
 		DB4: dbx4,
@@ -134,7 +132,7 @@ func main() {
 	API := e.Group("", h.apiMiddleware)
 	API.POST("/user", h.createUser)
 	API.POST("/login", h.login)
-	sessCheckAPI := API.Group("", h.checkSessionMiddleware)
+	sessCheckAPI := API.Group("", h.checkSessionMiddleware, h.selectDBMiddleware)
 	sessCheckAPI.GET("/user/:userID/gacha/index", h.listGacha)
 	sessCheckAPI.POST("/user/:userID/gacha/draw/:gachaID/:n", h.drawGacha)
 	sessCheckAPI.GET("/user/:userID/present/index/:n", h.listPresent)
@@ -152,11 +150,37 @@ func main() {
 	adminAuthAPI.DELETE("/admin/logout", h.adminLogout)
 	adminAuthAPI.GET("/admin/master", h.adminListMaster)
 	adminAuthAPI.PUT("/admin/master", h.adminUpdateMaster)
-	adminAuthAPI.GET("/admin/user/:userID", h.adminUser)
-	adminAuthAPI.POST("/admin/user/:userID/ban", h.adminBanUser)
+	adminAuthAPI.GET("/admin/user/:userID", h.adminUser, h.selectDBMiddleware)
+	adminAuthAPI.POST("/admin/user/:userID/ban", h.adminBanUser, h.selectDBMiddleware)
 
 	e.Logger.Infof("Start server: address=%s", e.Server.Addr)
 	e.Logger.Error(e.StartServer(e.Server))
+}
+
+func (h *Handler) selectDBMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		userID, err := getUserID(c)
+		if err != nil {
+			return errorResponse(c, http.StatusBadRequest, err)
+		}
+
+		h.setDB(c, userID)
+
+		return next(c)
+	}
+}
+
+func (h *Handler) setDB(c echo.Context, userID int64) {
+	switch userID % 4 {
+	case 0:
+		c.Set("db", h.DB)
+	case 1:
+		c.Set("db", h.DB2)
+	case 2:
+		c.Set("db", h.DB3)
+	case 3:
+		c.Set("db", h.DB4)
+	}
 }
 
 func connectDB(batch bool, index int) (*sqlx.DB, error) {
@@ -210,7 +234,7 @@ func (h *Handler) apiMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		// マスタ確認
 		query := "SELECT * FROM version_masters WHERE status=1"
 		masterVersion := new(VersionMaster)
-		if err := h.DB.Get(masterVersion, query); err != nil {
+		if err := c.Get("db").(*sqlx.DB).Get(masterVersion, query); err != nil {
 			if err == sql.ErrNoRows {
 				return errorResponse(c, http.StatusNotFound, fmt.Errorf("active master version is not found"))
 			}
@@ -224,7 +248,7 @@ func (h *Handler) apiMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		// check ban
 		userID, err := getUserID(c)
 		if err == nil && userID != 0 {
-			isBan, err := h.checkBan(userID)
+			isBan, err := h.checkBan(c, userID)
 			if err != nil {
 				return errorResponse(c, http.StatusInternalServerError, err)
 			}
@@ -261,7 +285,7 @@ func (h *Handler) checkSessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 
 		userSession := new(Session)
 		query := "SELECT * FROM user_sessions WHERE session_id=? AND expired_at > ?"
-		if err := h.DB.Get(userSession, query, sessID, requestAt); err != nil {
+		if err := c.Get("db").(*sqlx.DB).Get(userSession, query, sessID, requestAt); err != nil {
 			if err == sql.ErrNoRows {
 				return errorResponse(c, http.StatusUnauthorized, ErrUnauthorized)
 			}
@@ -274,7 +298,7 @@ func (h *Handler) checkSessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 
 		// if userSession.ExpiredAt < requestAt {
 		// 	query = "DELETE FROM user_sessions WHERE session_id=?"
-		// 	if _, err = h.DB.Exec(query, sessID); err != nil {
+		// 	if _, err = c.Get("db").(*sqlx.DB).Exec(query, sessID); err != nil {
 		// 		return errorResponse(c, http.StatusInternalServerError, err)
 		// 	}
 		// 	return errorResponse(c, http.StatusUnauthorized, ErrExpiredSession)
@@ -289,10 +313,10 @@ func (h *Handler) checkSessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 }
 
 // checkOneTimeToken
-func (h *Handler) checkOneTimeToken(token string, tokenType int, requestAt int64) error {
+func (h *Handler) checkOneTimeToken(c echo.Context, token string, tokenType int, requestAt int64) error {
 	tk := new(UserOneTimeToken)
 	query := "SELECT * FROM user_one_time_tokens WHERE token=? AND token_type=? AND deleted_at IS NULL"
-	if err := h.DB.Get(tk, query, token, tokenType); err != nil {
+	if err := c.Get("db").(*sqlx.DB).Get(tk, query, token, tokenType); err != nil {
 		if err == sql.ErrNoRows {
 			return ErrInvalidToken
 		}
@@ -301,7 +325,7 @@ func (h *Handler) checkOneTimeToken(token string, tokenType int, requestAt int64
 
 	if tk.ExpiredAt < requestAt {
 		query = "UPDATE user_one_time_tokens SET deleted_at=? WHERE token=?"
-		if _, err := h.DB.Exec(query, requestAt, token); err != nil {
+		if _, err := c.Get("db").(*sqlx.DB).Exec(query, requestAt, token); err != nil {
 			return err
 		}
 		return ErrInvalidToken
@@ -309,7 +333,7 @@ func (h *Handler) checkOneTimeToken(token string, tokenType int, requestAt int64
 
 	// 使ったトークンを失効する
 	query = "UPDATE user_one_time_tokens SET deleted_at=? WHERE token=?"
-	if _, err := h.DB.Exec(query, requestAt, token); err != nil {
+	if _, err := c.Get("db").(*sqlx.DB).Exec(query, requestAt, token); err != nil {
 		return err
 	}
 
@@ -317,10 +341,10 @@ func (h *Handler) checkOneTimeToken(token string, tokenType int, requestAt int64
 }
 
 // checkViewerID
-func (h *Handler) checkViewerID(userID int64, viewerID string) error {
+func (h *Handler) checkViewerID(c echo.Context, userID int64, viewerID string) error {
 	query := "SELECT * FROM user_devices WHERE user_id=? AND platform_id=?"
 	device := new(UserDevice)
-	if err := h.DB.Get(device, query, userID, viewerID); err != nil {
+	if err := c.Get("db").(*sqlx.DB).Get(device, query, userID, viewerID); err != nil {
 		if err == sql.ErrNoRows {
 			return ErrUserDeviceNotFound
 		}
@@ -331,10 +355,10 @@ func (h *Handler) checkViewerID(userID int64, viewerID string) error {
 }
 
 // checkBan
-func (h *Handler) checkBan(userID int64) (bool, error) {
+func (h *Handler) checkBan(c echo.Context, userID int64) (bool, error) {
 	banUser := new(UserBan)
 	query := "SELECT * FROM user_bans WHERE user_id=?"
-	if err := h.DB.Get(banUser, query, userID); err != nil {
+	if err := c.Get("db").(*sqlx.DB).Get(banUser, query, userID); err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
@@ -343,7 +367,7 @@ func (h *Handler) checkBan(userID int64) (bool, error) {
 	return true, nil
 }
 
-// getRequestTime リクエストを受けた時間をコンテキストからunixtimeで取得する
+// getRequestTime リクエストを受けた時間をコンテキストからunixTimeで取得する
 func getRequestTime(c echo.Context) (int64, error) {
 	v := c.Get("requestTime")
 	if requestTime, ok := v.(int64); ok {

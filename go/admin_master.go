@@ -79,7 +79,7 @@ func (h *Handler) adminUpdateMaster(c echo.Context) error {
 	var activeMaster *VersionMaster
 	eg := errgroup.Group{}
 
-	for _, db := range []*sqlx.DB{h.DB1, h.DB2, h.DB3, h.DB4} {
+	for _, db := range []*sqlx.DB{h.DB, h.DB2, h.DB3, h.DB4} {
 		db := db
 
 		eg.Go(func() error {
