@@ -18,7 +18,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/logica0419/helpisu"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -453,7 +452,7 @@ func (h *Handler) health(c echo.Context) error {
 
 // errorResponse returns error.
 func errorResponse(c echo.Context, statusCode int, err error) error {
-	c.Logger().Errorf("status=%d, err=%+v", statusCode, errors.WithStack(err))
+	// c.Logger().Errorf("status=%d, err=%+v", statusCode, errors.WithStack(err))
 
 	return c.JSON(statusCode, struct {
 		StatusCode int    `json:"status_code"`
