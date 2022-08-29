@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
@@ -541,14 +540,7 @@ func getEnv(key, defaultVal string) string {
 
 // parseRequestBody parses request body.
 func parseRequestBody(c echo.Context, dist interface{}) error {
-	buf, err := io.ReadAll(c.Request().Body)
-	if err != nil {
-		return ErrInvalidRequestBody
-	}
-	if err = json.Unmarshal(buf, &dist); err != nil {
-		return ErrInvalidRequestBody
-	}
-	return nil
+	return c.Bind(dist)
 }
 
 type UpdatedResource struct {
